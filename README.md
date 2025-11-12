@@ -5,6 +5,8 @@ Working Outline: https://docs.google.com/document/d/1Z5bNR8pYPRpAQ_cMwrd0k4K78t8
 
 Download Enviornment:
 ```
+conda env create -f environment.yaml
+conda activate voice_isolate_env
 ```
 
 Run with:
