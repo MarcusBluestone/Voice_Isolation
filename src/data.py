@@ -91,20 +91,20 @@ class TransformData:
     3. Image                   : .png of amplitude/phase for each elmnt in batch
     4. Audio File              : .wav file for each elmnt in batch
 
-    waveform_to_audio: 1 -> 4
-    waveform_to_spectrogram: 1 -> 2
-    save_spectrogram: 2 -> 3
-    spectrogram_to_waveform: 2 -> 1 (only gives waveform, not sample rate)
+    a) waveform_to_audio: 1 -> 4
+    b) waveform_to_spectrogram: 1 -> 2 
+        - also returns min/max amp_db of original
+    c) save_spectrogram: 2 -> 3
+    d) spectrogram_to_waveform: 2 -> 1 
+        - only gives waveform, not sample rate
+        - request the min/max of amp_db of the original
     """
 
     def __init__(self):
 
         # Values for Spectrogram creation
-        self.nfft = 1024
+        self.nfft = 510
         self.hop_length = 256
-
-        self.amp_min = -80
-        self.amp_max = 0
 
     def waveform_to_audio(self, waveform: torch.Tensor, sample_rate: torch.Tensor, fname: str = 'output', max_save: int = 5): 
         # Unsqueeze if unbatched
@@ -119,6 +119,17 @@ class TransformData:
 
         for i in range(num_samples):
             torchaudio.save(f"{fname}{i}.wav", waveform[i, :], sample_rate[i, :])
+
+    def _normalize_amplitude(self, amp_db):
+        # amp_db: (B, F, T)
+        min_db = amp_db.amin(dim=(1,2), keepdim=True)
+        max_db = amp_db.amax(dim=(1,2), keepdim=True)
+
+        amp_norm = (amp_db - min_db) / (max_db - min_db + 1e-8)
+        return amp_norm, min_db, max_db
+
+    def _denormalize_amplitude(self, amp_norm, min_db, max_db):
+        return amp_norm * (max_db - min_db) + min_db
 
     def waveform_to_spectrogram(self, waveform: torch.Tensor):
         
@@ -137,11 +148,8 @@ class TransformData:
         # 1. Calculate Amplitude
         magnitude = stft.abs()
         power = magnitude ** 2
-        amplitude = torchaudio.transforms.AmplitudeToDB(stype='power', top_db=80)(power) # 10 * log_10(power)
-        print(amplitude.max(), amplitude.min())
-        # Amplitude: scale to [0,1]
-        # amplitude = torch.clamp(amplitude, min=self.amp_min, max=self.amp_max)
-        # amplitude = (amplitude - self.amp_min) / (-self.amp_min)
+        amplitude = torchaudio.transforms.AmplitudeToDB(stype='power', top_db = 80)(power) # 10 * log_10(power)
+        amplitude, min_db, max_db = self._normalize_amplitude(amplitude)
 
         # 2. Calculate Phase
         phase = torch.angle(stft)
@@ -149,13 +157,13 @@ class TransformData:
         # Phase: scale to [-1,1]
         phase = phase / torch.pi
 
-        return amplitude, phase
+        return amplitude, phase, (min_db, max_db)
     
-    def spectrogram_to_waveform(self, amplitude: torch.Tensor, phase: torch.Tensor):
+    def spectrogram_to_waveform(self, amplitude: torch.Tensor, phase: torch.Tensor, min_db: torch.Tensor, max_db: torch.Tensor):
         """
         Invert everything from the function above
         """
-        # amplitude = amplitude * -self.amp_min + self.amp_min
+        amplitude = self._denormalize_amplitude(amplitude, min_db, max_db)
 
         # convert from dB to linear power
         power = 10 ** (amplitude / 10) 
@@ -230,13 +238,13 @@ if __name__ == '__main__':
 
     td.waveform_to_audio(wave, rate, fname = 'outputs/original', max_save = 3)
 
-    amp, phase = td.waveform_to_spectrogram(wave)
+    amp, phase, (min_db, max_db) = td.waveform_to_spectrogram(wave)
     td.save_spectrogram(amp, phase)
 
     print(amp.shape)
     print(phase.shape)
 
-    waveforms_reconstr = td.spectrogram_to_waveform(amp, phase)
+    waveforms_reconstr = td.spectrogram_to_waveform(amp, phase, min_db, max_db)
     td.waveform_to_audio(waveforms_reconstr, rate, fname = 'outputs/reconstr', max_save = 3)
 
 
