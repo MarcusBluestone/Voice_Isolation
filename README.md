@@ -14,6 +14,11 @@ To re-upload environment:
 conda env export > conda_env.yaml
 ```
 
+To download the dataset into the voice_data folder, run:
+```
+python -m src.data
+```
+
 Run with:
 ```
 python -m src.train

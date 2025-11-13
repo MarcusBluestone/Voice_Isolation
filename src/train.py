@@ -1,4 +1,4 @@
-from src.data import CleanDataset
+from src.data import CleanDataset, CleanDatasetIterable
 from src.data import NoiseGenerator
 
 def train():
