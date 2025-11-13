@@ -193,8 +193,7 @@ class TransformData:
 
         return waveforms
     
-    @staticmethod
-    def save_spectrogram(amp: torch.Tensor, phase: torch.Tensor, out_dir: str = 'outputs', max_save: int = 5):
+    def save_spectrogram(self, amp: torch.Tensor, phase: torch.Tensor, out_dir: str = 'outputs', max_save: int = 5):
         """
         Saves amplitude and phase spectrograms for a batch of waveforms.
         Each spectrogram gets its own file with a colorbar.
