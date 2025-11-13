@@ -4,8 +4,8 @@ from torch.utils.data import DataLoader
 from datasets import load_dataset
 import torch
 import torchaudio
-from torch.nn.utils.rnn import pad_sequence
 
+import numpy as np
 import os
 import matplotlib.pyplot as plt
 class CleanDatasetIterable(IterableDataset):
@@ -18,15 +18,16 @@ class CleanDatasetIterable(IterableDataset):
     2. No random access. 
     
     """
-    def __init__(self, split="train.100"):
+    def __init__(self, split: str = "train.100", chunk_size: int = 50_000):
         self.dataset = load_dataset("librispeech_asr", "clean", split=split, streaming=True)
+        self.chunk_size = chunk_size
 
     def __iter__(self):
         for data in self.dataset:
             waveform = torch.tensor(data["audio"]["array"])
             sample_rate = data["audio"]["sampling_rate"]
 
-            yield waveform, torch.tensor([sample_rate])
+            yield get_chunk(waveform, self.chunk_size), torch.tensor([sample_rate])
 
 class CleanDataset(Dataset):
     """
@@ -36,7 +37,7 @@ class CleanDataset(Dataset):
     - ~2 GB overhead for validate
     
     """
-    def __init__(self, url="train-clean-100"):
+    def __init__(self, url="train-clean-100", chunk_size: int = 50_000):
         # (waveform, sample_rate, transcript, speaker_id, chapter_id, utterance_id)
         self.dataset = torchaudio.datasets.LIBRISPEECH(
             root = './voice_data',
@@ -44,6 +45,7 @@ class CleanDataset(Dataset):
             download = True,
         )
 
+        self.chunk_size = chunk_size
 
     def __len__(self):
         return len(self.dataset)
@@ -51,7 +53,15 @@ class CleanDataset(Dataset):
     def __getitem__(self, idx):
         waveform, sample_rate = self.dataset[idx][:2]
 
-        return (waveform, torch.tensor([sample_rate]))
+        return (get_chunk(waveform, self.chunk_size), torch.tensor([sample_rate]))
+
+def get_chunk(waveform: torch.Tensor, chunk_size: int):
+    """
+    Takes in a 1D waveform and chunks it randomly w/ fixed size
+    """
+    idx = np.random.randint(0, len(waveform) - chunk_size)
+
+    return waveform[idx:idx + chunk_size]
 
 class NoiseGenerator:
     """
@@ -85,15 +95,13 @@ class TransformData:
     waveform_to_spectrogram: 1 -> 2
     save_spectrogram: 2 -> 3
     spectrogram_to_waveform: 2 -> 1 (only gives waveform, not sample rate)
-
-    fix_waveform_length: should be used in DataLoader collate_fn
     """
 
     def __init__(self):
 
         # Values for Spectrogram creation
         self.nfft = 1024
-        self.hop_length = 512
+        self.hop_length = 256
 
         self.amp_min = -80
         self.amp_max = 0
@@ -127,13 +135,13 @@ class TransformData:
         )
         
         # 1. Calculate Amplitude
-        power = stft.abs() ** 2
-        # This does: 10 * log_10(power)
-        amplitude = torchaudio.transforms.AmplitudeToDB(stype='power')(power) 
-
+        magnitude = stft.abs()
+        power = magnitude ** 2
+        amplitude = torchaudio.transforms.AmplitudeToDB(stype='power', top_db=80)(power) # 10 * log_10(power)
+        print(amplitude.max(), amplitude.min())
         # Amplitude: scale to [0,1]
-        amplitude = torch.clamp(amplitude, min=self.amp_min, max=self.amp_max)
-        amplitude = (amplitude - self.amp_min) / (-self.amp_min)
+        # amplitude = torch.clamp(amplitude, min=self.amp_min, max=self.amp_max)
+        # amplitude = (amplitude - self.amp_min) / (-self.amp_min)
 
         # 2. Calculate Phase
         phase = torch.angle(stft)
@@ -144,15 +152,19 @@ class TransformData:
         return amplitude, phase
     
     def spectrogram_to_waveform(self, amplitude: torch.Tensor, phase: torch.Tensor):
-        amplitude = amplitude * -self.amp_min + self.amp_min
+        """
+        Invert everything from the function above
+        """
+        # amplitude = amplitude * -self.amp_min + self.amp_min
 
         # convert from dB to linear power
-        amplitude = 10 ** (amplitude / 10) 
+        power = 10 ** (amplitude / 10) 
+        magnitude = torch.sqrt(power)
 
         # phase: [-1,1] → [-pi, pi]
         phase = phase * torch.pi
 
-        stft_recon = amplitude * torch.exp(1j * phase)  # complex tensor
+        stft_recon = magnitude * torch.exp(1j * phase)  # complex tensor
 
         win_length = self.nfft
         window = torch.hann_window(self.nfft, device=stft_recon.device)
@@ -174,17 +186,6 @@ class TransformData:
         return waveforms
     
     @staticmethod
-    def fix_waveform_length(batch, desired_size = 220_000):
-        """
-        batch: list of tuples (waveform, sample_rate)
-        Pads/Cuts all waveforms to a specified length
-        """
-        waveforms, sample_rates = zip(*batch)
- 
-        padded_waveforms = pad_sequence(waveforms + (torch.ones(desired_size),), batch_first = True) # expand if necessary
-        return padded_waveforms[:-1, :desired_size], torch.tensor(sample_rates).unsqueeze(1)
-
-    @staticmethod
     def save_spectrogram(amp: torch.Tensor, phase: torch.Tensor, out_dir: str = 'outputs', max_save: int = 5):
         """
         Saves amplitude and phase spectrograms for a batch of waveforms.
@@ -202,7 +203,7 @@ class TransformData:
             fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 
             # --- Amplitude ---
-            im0 = axes[0].imshow(amp[idx].cpu().numpy(), cmap='magma', vmin=0.0, vmax=1.0, origin='lower')
+            im0 = axes[0].imshow(amp[idx].cpu().numpy(), cmap='magma', origin='lower')
             axes[0].set_title('Amplitude')
             axes[0].axis('off')
             fig.colorbar(im0, ax=axes[0])
@@ -218,10 +219,10 @@ class TransformData:
             plt.close()
 
 if __name__ == '__main__':
-    dataset = CleanDatasetIterable()
+    dataset = CleanDatasetIterable(chunk_size = 50_000)
     td = TransformData()
 
-    dataloader = DataLoader(dataset, batch_size=4, collate_fn=td.fix_waveform_length)
+    dataloader = DataLoader(dataset, batch_size=4)
 
     wave, rate = (next(iter(dataloader)))
     print(wave.shape)
