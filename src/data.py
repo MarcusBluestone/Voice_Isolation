@@ -111,6 +111,11 @@ class TransformData:
         self.hop_length = 256
 
     def waveform_to_audio(self, waveform: torch.Tensor, sample_rate: torch.Tensor, fname: str = 'output', max_save: int = 5): 
+        """
+        Converts waveform -> audio file
+        - required to specify sample_rate but I think it's always 16 kHz
+        """
+
         # Unsqueeze if unbatched
         if waveform.ndim == 1:
             waveform = torch.unsqueeze(waveform, 0)
@@ -125,6 +130,9 @@ class TransformData:
             torchaudio.save(f"{fname}{i}.wav", waveform[i, :], sample_rate[i, :])
 
     def _normalize_amplitude(self, amp_db):
+        """
+        Internal function for normalizing amplitude after DB scaling
+        """
         # amp_db: (B, F, T)
         min_db = amp_db.amin(dim=(1,2), keepdim=True)
         max_db = amp_db.amax(dim=(1,2), keepdim=True)
@@ -133,9 +141,15 @@ class TransformData:
         return amp_norm, min_db, max_db
 
     def _denormalize_amplitude(self, amp_norm, min_db, max_db):
+        """
+        Internal function for de-normalizing amplitude after DB scaling
+        """
         return amp_norm * (max_db - min_db) + min_db
 
     def waveform_to_spectrogram(self, waveform: torch.Tensor):
+        """
+        Waveform -> Phase & Amplitude spectrograms
+        """
         
         n_fft = self.nfft
         window = torch.hann_window(n_fft, device=waveform.device)  # Hann window
@@ -166,6 +180,8 @@ class TransformData:
     def spectrogram_to_waveform(self, amplitude: torch.Tensor, phase: torch.Tensor, min_db: torch.Tensor, max_db: torch.Tensor):
         """
         Invert everything from the function above
+
+        - note that min_db and max_db from the original (pre-normalized amp spectrogram) are required
         """
         amplitude = self._denormalize_amplitude(amplitude, min_db, max_db)
 
@@ -233,7 +249,7 @@ class TransformData:
         """
         (B, W, H) -> (B, size, size) by padding on the right w/ 0's
         """
-        B, W, H = input.shape
+        _, W, H = input.shape
         
         pad_W = size - W
         pad_H = size - H
@@ -248,6 +264,7 @@ if __name__ == '__main__':
     dataloader = DataLoader(dataset, batch_size=4)
 
     wave, rate = (next(iter(dataloader)))
+    print("\nBatch Wave & Rate Sizes")
     print(wave.shape)
     print(rate.shape)
 
@@ -256,10 +273,12 @@ if __name__ == '__main__':
     amp, phase, (min_db, max_db) = td.waveform_to_spectrogram(wave)
     td.save_spectrogram(amp, phase)
 
+    print("\Batched Spectrogram sizes")
     print(amp.shape)
     print(phase.shape)
 
     amp_res, phase_res = td.add_padding(amp), td.add_padding(phase)
+    print("\Batched & Padded Spectrogram sizes")
     print(amp_res.shape)
     print(phase_res.shape)
 

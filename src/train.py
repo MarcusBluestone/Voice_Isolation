@@ -6,7 +6,7 @@ def train():
     """
     1. Sample chunk
     2. Add noise to chunk
-    3. Convert into spectrogram
+    3. Convert into spectrogram of phase & amplitude
     4. Reshape to (256, 256)
     5. Input into Model
     6. Reshape output back into original size
