@@ -1,9 +1,19 @@
 from torch.utils.data import Dataset
+from datasets import load_dataset
 
 class CleanDataset(Dataset):
     """
     Dataset of clean audio signals  
     """
+
+    def __init__(self):
+        dataset = load_dataset(
+            "librispeech_asr", 
+            "clean", 
+            split="train.100",
+            streaming=True
+        )
+
     
     def __len__(self):
         pass
@@ -39,3 +49,7 @@ class TransformData:
     """
 
     pass
+
+
+if __name__ == '__main__':
+    dataset = CleanDataset()
