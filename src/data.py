@@ -97,9 +97,7 @@ class TransformData:
 
         self.amp_min = -80
         self.amp_max = 0
-
-        self.normalize = True
-
+        
     def waveform_to_audio(self, waveform: torch.Tensor, sample_rate: torch.Tensor, fname: str = 'output', max_save: int = 5): 
         # Unsqueeze if unbatched
         if waveform.ndim == 1:
@@ -133,16 +131,15 @@ class TransformData:
         # This does: 10 * log_10(power)
         amplitude = torchaudio.transforms.AmplitudeToDB(stype='power')(power) 
 
+        # Amplitude: scale to [0,1]
+        amplitude = torch.clamp(amplitude, min=self.amp_min, max=self.amp_max)
+        amplitude = (amplitude - self.amp_min) / (-self.amp_min)
+
         # 2. Calculate Phase
         phase = torch.angle(stft)
 
-        if self.normalize:
-            # Amplitude: scale to [0,1]
-            amplitude = torch.clamp(amplitude, min=self.amp_min, max=self.amp_max)
-            amplitude = (amplitude - self.amp_min) / (-self.amp_min)
-
-            # Phase: scale to [-1,1]
-            phase = phase / torch.pi
+        # Phase: scale to [-1,1]
+        phase = phase / torch.pi
 
         return amplitude, phase
     
