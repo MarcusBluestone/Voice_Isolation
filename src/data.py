@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 from datasets import load_dataset
 import torch
 import torchaudio
+import torch.nn.functional as F
 
 import numpy as np
 import os
@@ -98,6 +99,9 @@ class TransformData:
     d) spectrogram_to_waveform: 2 -> 1 
         - only gives waveform, not sample rate
         - request the min/max of amp_db of the original
+
+    e) add_padding: (B, W, H) --> (B, 256, 256)
+
     """
 
     def __init__(self):
@@ -225,6 +229,18 @@ class TransformData:
             plt.savefig(f'{out_dir}/spec{idx}.png', dpi=150)
             plt.close()
 
+    def add_padding(self, input: torch.Tensor, size: int = 256):
+        """
+        (B, W, H) -> (B, size, size) by padding on the right w/ 0's
+        """
+        B, W, H = input.shape
+        
+        pad_W = size - W
+        pad_H = size - H
+
+        # (pad_H_left, pad_H_right, pad_W_left, pad_W_right)
+        return F.pad(input, (0, pad_H, 0, pad_W))
+
 if __name__ == '__main__':
     dataset = CleanDatasetIterable(chunk_size = 50_000)
     td = TransformData()
@@ -242,6 +258,10 @@ if __name__ == '__main__':
 
     print(amp.shape)
     print(phase.shape)
+
+    amp_res, phase_res = td.add_padding(amp), td.add_padding(phase)
+    print(amp_res.shape)
+    print(phase_res.shape)
 
     waveforms_reconstr = td.spectrogram_to_waveform(amp, phase, min_db, max_db)
     td.waveform_to_audio(waveforms_reconstr, rate, fname = 'outputs/reconstr', max_save = 3)
