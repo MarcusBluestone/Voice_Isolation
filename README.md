@@ -9,6 +9,11 @@ conda env create -f environment.yaml
 conda activate voice_isolate_env
 ```
 
+To re-upload environment:
+```
+conda env export > conda_env.yaml
+```
+
 Run with:
 ```
 python -m src.train
