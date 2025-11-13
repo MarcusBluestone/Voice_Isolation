@@ -35,6 +35,7 @@ class TransformData:
     Transform the Representation of the signal
     - Wavelet
     - Spectrogram
+    - Work on batches
     """
 
     pass
