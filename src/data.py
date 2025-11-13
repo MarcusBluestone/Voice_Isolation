@@ -97,7 +97,7 @@ class TransformData:
 
         self.amp_min = -80
         self.amp_max = 0
-        
+
     def waveform_to_audio(self, waveform: torch.Tensor, sample_rate: torch.Tensor, fname: str = 'output', max_save: int = 5): 
         # Unsqueeze if unbatched
         if waveform.ndim == 1:
@@ -227,7 +227,7 @@ if __name__ == '__main__':
     print(wave.shape)
     print(rate.shape)
 
-    td.waveform_to_audio(wave, rate, fname = 'outputs/output', max_save = 3)
+    td.waveform_to_audio(wave, rate, fname = 'outputs/original', max_save = 3)
 
     amp, phase = td.waveform_to_spectrogram(wave)
     td.save_spectrogram(amp, phase)
