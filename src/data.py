@@ -38,11 +38,11 @@ class CleanDataset(Dataset):
     - ~2 GB overhead for validate
     
     """
-    def __init__(self, url="train-clean-100", chunk_size: int = 50_000):
+    def __init__(self, split="train-clean-100", chunk_size: int = 50_000):
         # (waveform, sample_rate, transcript, speaker_id, chapter_id, utterance_id)
         self.dataset = torchaudio.datasets.LIBRISPEECH(
             root = './voice_data',
-            url = url,
+            url = split,
             download = True,
         )
 
@@ -259,6 +259,7 @@ class TransformData:
 
 if __name__ == '__main__':
     dataset = CleanDatasetIterable(chunk_size = 50_000)
+    dataset = CleanDataset(chunk_size = 50_000)
     td = TransformData()
 
     dataloader = DataLoader(dataset, batch_size=4)
@@ -268,7 +269,7 @@ if __name__ == '__main__':
     print(wave.shape)
     print(rate.shape)
 
-    td.waveform_to_audio(wave, rate, fname = 'outputs/original', max_save = 3)
+    td.waveform_to_audio(wave, rate, fname = 'outputs/original')
 
     amp, phase, (min_db, max_db) = td.waveform_to_spectrogram(wave)
     td.save_spectrogram(amp, phase)
@@ -283,7 +284,7 @@ if __name__ == '__main__':
     print(phase_res.shape)
 
     waveforms_reconstr = td.spectrogram_to_waveform(amp, phase, min_db, max_db)
-    td.waveform_to_audio(waveforms_reconstr, rate, fname = 'outputs/reconstr', max_save = 3)
+    td.waveform_to_audio(waveforms_reconstr, rate, fname = 'outputs/reconstr')
 
 
 

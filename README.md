@@ -9,7 +9,7 @@ conda env create -f environment.yaml
 conda activate voice_isolate_env
 ```
 
-To re-upload environment:
+To re-upload environment if u made changes to it:
 ```
 conda env export > conda_env.yaml
 ```
