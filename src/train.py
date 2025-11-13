@@ -1,5 +1,5 @@
 from src.data import CleanDataset, CleanDatasetIterable
-from src.data import NoiseGenerator
+from src.data import NoiseGenerator, DataTransformer
 
 def train():
 

@@ -82,7 +82,7 @@ class NoiseGenerator:
         pass
 
     
-class TransformData:
+class DataTransformer:
     """
     Transform the Representation of the signal. Works on BATCHED inputs! If a vector is passed,
     it is unsqueezed first
@@ -260,7 +260,7 @@ class TransformData:
 if __name__ == '__main__':
     dataset = CleanDatasetIterable(chunk_size = 50_000)
     dataset = CleanDataset(chunk_size = 50_000)
-    td = TransformData()
+    td = DataTransformer()
 
     dataloader = DataLoader(dataset, batch_size=4)
 
