@@ -5,7 +5,6 @@ from datasets import load_dataset
 import torch
 import torchaudio
 from torch.nn.utils.rnn import pad_sequence
-import torch.nn.functional as F
 
 import os
 import matplotlib.pyplot as plt
@@ -90,8 +89,18 @@ class TransformData:
     fix_waveform_length: should be used in DataLoader collate_fn
     """
 
-    @staticmethod
-    def waveform_to_audio(waveform: torch.Tensor, sample_rate: torch.Tensor, fname: str = 'output', max_save: int = 5): 
+    def __init__(self):
+
+        # Values for Spectrogram creation
+        self.nfft = 1024
+        self.hop_length = 512
+
+        self.amp_min = -80
+        self.amp_max = 0
+
+        self.normalize = True
+
+    def waveform_to_audio(self, waveform: torch.Tensor, sample_rate: torch.Tensor, fname: str = 'output', max_save: int = 5): 
         # Unsqueeze if unbatched
         if waveform.ndim == 1:
             waveform = torch.unsqueeze(waveform, 0)
@@ -105,42 +114,40 @@ class TransformData:
         for i in range(num_samples):
             torchaudio.save(f"{fname}{i}.wav", waveform[i, :], sample_rate[i, :])
 
-    @staticmethod
-    def waveform_to_spectrogram(waveform: torch.Tensor, output_size: int | None = None, 
-                                normalize: bool = True):
+    def waveform_to_spectrogram(self, waveform: torch.Tensor):
         
-        n_fft = 1024
+        n_fft = self.nfft
         window = torch.hann_window(n_fft, device=waveform.device)  # Hann window
 
         stft = torch.stft(
             waveform,
             n_fft=n_fft,
-            hop_length=512,
+            hop_length=self.hop_length,
             win_length=n_fft,
             window=window,
             return_complex=True
         )
         
-        amplitude = torchaudio.transforms.AmplitudeToDB(stype='power')(stft.abs() ** 2)
+        # 1. Calculate Amplitude
+        power = stft.abs() ** 2
+        # This does: 10 * log_10(power)
+        amplitude = torchaudio.transforms.AmplitudeToDB(stype='power')(power) 
+
+        # 2. Calculate Phase
         phase = torch.angle(stft)
 
-        if normalize:
+        if self.normalize:
             # Amplitude: scale to [0,1]
-            amplitude = torch.clamp(amplitude, min=-80.0, max=0.0)
-            amplitude = (amplitude + 80.0) / 80.0
+            amplitude = torch.clamp(amplitude, min=self.amp_min, max=self.amp_max)
+            amplitude = (amplitude - self.amp_min) / (-self.amp_min)
 
             # Phase: scale to [-1,1]
             phase = phase / torch.pi
 
-        if output_size is not None:
-            amplitude = F.interpolate(amplitude.unsqueeze(1), size=(output_size, output_size), mode='bilinear', align_corners=False).squeeze(1)
-            phase = F.interpolate(phase.unsqueeze(1), size=(output_size, output_size), mode='bilinear', align_corners=False).squeeze(1)
-
         return amplitude, phase
     
-    @staticmethod
-    def spectrogram_to_waveform(amplitude: torch.Tensor, phase: torch.Tensor):
-        amplitude = amplitude * 80.0 - 80.0      # scale back to [-80, 0] dB
+    def spectrogram_to_waveform(self, amplitude: torch.Tensor, phase: torch.Tensor):
+        amplitude = amplitude * -self.amp_min + self.amp_min
 
         # convert from dB to linear power
         amplitude = 10 ** (amplitude / 10) 
@@ -150,18 +157,16 @@ class TransformData:
 
         stft_recon = amplitude * torch.exp(1j * phase)  # complex tensor
 
-        n_fft = 1024
-        hop_length = 512
-        win_length = n_fft
-        window = torch.hann_window(n_fft, device=stft_recon.device)
+        win_length = self.nfft
+        window = torch.hann_window(self.nfft, device=stft_recon.device)
 
         # If batched, loop over batch
         waveforms = []
         for i in range(stft_recon.shape[0]):
             wav = torch.istft(
                 stft_recon[i],         # shape: (freq_bins, time_frames)
-                n_fft=n_fft,
-                hop_length=hop_length,
+                n_fft=self.nfft,
+                hop_length= self.hop_length,
                 win_length=win_length,
                 window=window
             )
@@ -217,22 +222,24 @@ class TransformData:
 
 if __name__ == '__main__':
     dataset = CleanDatasetIterable()
-    dataloader = DataLoader(dataset, batch_size=4, collate_fn=TransformData.fix_waveform_length)
+    td = TransformData()
+
+    dataloader = DataLoader(dataset, batch_size=4, collate_fn=td.fix_waveform_length)
 
     wave, rate = (next(iter(dataloader)))
     print(wave.shape)
     print(rate.shape)
 
-    TransformData.waveform_to_audio(wave, rate, fname = 'outputs/output', max_save = 3)
+    td.waveform_to_audio(wave, rate, fname = 'outputs/output', max_save = 3)
 
-    amp, phase = TransformData.waveform_to_spectrogram(wave)
-    TransformData.save_spectrogram(amp, phase)
+    amp, phase = td.waveform_to_spectrogram(wave)
+    td.save_spectrogram(amp, phase)
 
     print(amp.shape)
     print(phase.shape)
 
-    waveforms_reconstr = TransformData.spectrogram_to_waveform(amp, phase)
-    TransformData.waveform_to_audio(waveforms_reconstr, rate, fname = 'outputs/reconstr', max_save = 3)
+    waveforms_reconstr = td.spectrogram_to_waveform(amp, phase)
+    td.waveform_to_audio(waveforms_reconstr, rate, fname = 'outputs/reconstr', max_save = 3)
 
 
 
