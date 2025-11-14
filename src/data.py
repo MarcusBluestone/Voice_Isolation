@@ -231,12 +231,16 @@ class DataTransformer:
             # --- Amplitude ---
             im0 = axes[0].imshow(amp[idx].cpu().numpy(), cmap='magma', origin='lower')
             axes[0].set_title('Amplitude')
+            # axes[0].set_xlabel('Time Frames')
+            # axes[0].set_ylabel('Frequency Bins')
             axes[0].axis('off')
             fig.colorbar(im0, ax=axes[0])
 
             # --- Phase ---
             im1 = axes[1].imshow(phase[idx].cpu().numpy(), cmap='twilight', vmin=-1.0, vmax=1.0, origin='lower')
             axes[1].set_title('Phase')
+            # axes[1].set_xlabel('Time Frames')
+            # axes[0].set_ylabel('Frequency Bins')
             axes[1].axis('off')
             fig.colorbar(im1, ax=axes[1])
 
@@ -259,7 +263,7 @@ class DataTransformer:
 if __name__ == '__main__':
     # Commment out which one u want 
     # note that if u choose iterable, must have shuffle = False in dataloader
-    
+
     # dataset = CleanDatasetIterable(chunk_size = 50_000)
     dataset = CleanDataset(chunk_size = 50_000)
 
