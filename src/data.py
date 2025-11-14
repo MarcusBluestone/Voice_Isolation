@@ -257,8 +257,12 @@ class DataTransformer:
         return F.pad(input, (0, pad_H, 0, pad_W))
 
 if __name__ == '__main__':
-    dataset = CleanDatasetIterable(chunk_size = 50_000)
+    # Commment out which one u want 
+    # note that if u choose iterable, must have shuffle = False in dataloader
+    
+    # dataset = CleanDatasetIterable(chunk_size = 50_000)
     dataset = CleanDataset(chunk_size = 50_000)
+
     td = DataTransformer()
 
     dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
