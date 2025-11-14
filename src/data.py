@@ -53,8 +53,7 @@ class CleanDataset(Dataset):
     
     def __getitem__(self, idx):
         waveform, sample_rate = self.dataset[idx][:2]
-
-        return (get_chunk(waveform, self.chunk_size), torch.tensor([sample_rate]))
+        return (get_chunk(waveform[0], self.chunk_size), torch.tensor([sample_rate]))
 
 def get_chunk(waveform: torch.Tensor, chunk_size: int):
     """
@@ -262,7 +261,7 @@ if __name__ == '__main__':
     dataset = CleanDataset(chunk_size = 50_000)
     td = DataTransformer()
 
-    dataloader = DataLoader(dataset, batch_size=4)
+    dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
 
     wave, rate = (next(iter(dataloader)))
     print("\nBatch Wave & Rate Sizes")
@@ -274,12 +273,12 @@ if __name__ == '__main__':
     amp, phase, (min_db, max_db) = td.waveform_to_spectrogram(wave)
     td.save_spectrogram(amp, phase)
 
-    print("\Batched Spectrogram sizes")
+    print("\nBatched Spectrogram sizes")
     print(amp.shape)
     print(phase.shape)
 
     amp_res, phase_res = td.add_padding(amp), td.add_padding(phase)
-    print("\Batched & Padded Spectrogram sizes")
+    print("\nBatched & Padded Spectrogram sizes")
     print(amp_res.shape)
     print(phase_res.shape)
 
