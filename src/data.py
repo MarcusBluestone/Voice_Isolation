@@ -1,5 +1,6 @@
 from torch.utils.data import IterableDataset, Dataset
 from torch.utils.data import DataLoader
+from torch.utils.data import Subset
 
 from datasets import load_dataset
 import torch
@@ -39,29 +40,18 @@ class CleanDataset(Dataset):
     - ~2 GB overhead for validate
     
     """
-    def __init__(self, split="train-clean-100", chunk_size: int = 50_000):
+    def __init__(self, split="train-clean-100", chunk_size: int = 50_000, count: int | None = None):
         # (waveform, sample_rate, transcript, speaker_id, chapter_id, utterance_id)
         self.dataset = torchaudio.datasets.LIBRISPEECH(
             root = '../voice_data',
             url = split,
             download = True,
         )
+        if count is not None:
+            print(type(self.dataset))
+            self.dataset = Subset(self.dataset, indices= range(count))
+
         self.chunk_size = chunk_size
-
-        # Filter samples whose waveform is shorter than chunk_size
-        # self.indices = []
-        # bad_files = 0
-        # for idx in tqdm(range(len(self.dataset)), "Pruning Dataset of Corruped or Small Files"):
-        #     try:
-        #         waveform, _, _, _, _, _ = self.dataset[idx]
-        #         if waveform.shape[1] >= chunk_size:
-        #             self.indices.append(idx)
-        #     except RuntimeError:
-        #         print('here')
-        #         bad_files += 1
-
-        # print(f"Filtered dataset: kept {len(self.indices)} / {len(self.dataset)} examples")
-        # print(f"There are {bad_files} bad files")
 
     def __len__(self):
         return len(self.dataset)
@@ -93,7 +83,7 @@ class NoiseGenerator:
         # Download all the enviornment noise options? 
         pass
 
-    def add_gaussian(self, waveform: torch.Tensor, sigma: float = 1):
+    def add_gaussian(self, waveform: torch.Tensor, sigma: float = .01):
         return waveform + torch.rand_like(waveform) * sigma
 
     def add_environment(self, category: str):
@@ -269,18 +259,22 @@ class DataTransformer:
             plt.savefig(f'{out_dir}/spec{idx}.png', dpi=150)
             plt.close()
 
-    def add_padding(self, input: torch.Tensor, size: int = 256):
-        """
-        (B, W, H) -> (B, size, size) by padding on the right w/ 0's
-        """
-        _, W, H = input.shape
-        
-        pad_W = size - W
-        pad_H = size - H
 
-        # (pad_H_left, pad_H_right, pad_W_left, pad_W_right)
-        return F.pad(input, (0, pad_H, 0, pad_W))
+    def add_padding(self, x: torch.Tensor, size: int = 256):
+        """
+        Pads the last two dimensions of a tensor to (size, size), padding on the right/bottom.
+        Works for (B, W, H), (B, C, W, H), etc.
+        """
+        *leading_dims, W, H = x.shape  # unpack last two dimensions
+        pad_W = max(size - W, 0)
+        pad_H = max(size - H, 0)
 
+        # F.pad expects: (last_dim_left, last_dim_right, second_last_left, second_last_right, ...)
+        # Since we only pad right/bottom, left pads = 0
+        pad = (0, pad_H, 0, pad_W)
+
+        return F.pad(x, pad)
+    
 if __name__ == '__main__':
     # Commment out which one u want 
     # note that if u choose iterable, must have shuffle = False in dataloader
