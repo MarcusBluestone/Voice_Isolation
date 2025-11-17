@@ -30,6 +30,8 @@ from typing import Optional, Tuple
 import os
 import dataclasses
 
+
+
 from model_utils.blocks.segresnet_block import ResBlock, get_conv_layer, get_upsample_layer
 from model_utils.layers.factories import Dropout
 from model_utils.layers.utils import get_act_layer, get_norm_layer
@@ -289,27 +291,27 @@ class CustomVAE(nn.Module):
             print("Decoded shape:", decoded.shape)
             print("eps shape:", eps.shape)
         # Only in train mode return the loss
-        if self.training:
-            if self.use_log_var:
-                kl_per_elem = -0.5 * torch.sum(1 + logvar - z_mean.pow(2) - logvar.exp())
-                # flatten all non-batch dims:
-                kl_per_sample = kl_per_elem.view(kl_per_elem.size(0), -1).sum(dim=1)  # (B,)
-                kl = kl_per_sample.mean()
-            else: 
-                var = z_sigma.pow(2)
-                kl_per_elem = 0.5 * (z_mean.pow(2) + var - torch.log(1e-8 + var) - 1)
+        # if self.training:
+        #     if self.use_log_var:
+        #         kl_per_elem = -0.5 * torch.sum(1 + logvar - z_mean.pow(2) - logvar.exp())
+        #         # flatten all non-batch dims:
+        #         kl_per_sample = kl_per_elem.view(kl_per_elem.size(0), -1).sum(dim=1)  # (B,)
+        #         kl = kl_per_sample.mean()
+        #     else: 
+        #         var = z_sigma.pow(2)
+        #         kl_per_elem = 0.5 * (z_mean.pow(2) + var - torch.log(1e-8 + var) - 1)
 
-                kl_per_sample = kl_per_elem.view(kl_per_elem.size(0), -1).sum(dim=1)
-                kl = kl_per_sample.mean()
+        #         kl_per_sample = kl_per_elem.view(kl_per_elem.size(0), -1).sum(dim=1)
+        #         kl = kl_per_sample.mean()
              
 
-            recon = F.mse_loss(net_input, decoded, reduction="none")
-            recon = recon.view(recon.size(0), -1).mean(dim=1)         # per-sample mean
-            recon_loss = recon.mean() 
+        #     recon = F.mse_loss(net_input, decoded, reduction="none")
+        #     recon = recon.view(recon.size(0), -1).mean(dim=1)         # per-sample mean
+        #     recon_loss = recon.mean() 
             
-            vae_loss =  recon_loss + self.beta * kl
+        #     vae_loss =  recon_loss + self.beta * kl
             
-            return decoded, vae_loss
+        #     return decoded, vae_loss
         return decoded
     
     def encode(self, x):

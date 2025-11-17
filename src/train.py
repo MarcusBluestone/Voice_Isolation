@@ -1,5 +1,12 @@
-from src.data import CleanDataset, CleanDatasetIterable
-from src.data import NoiseGenerator, DataTransformer
+from data import CleanDataset
+from data import NoiseGenerator, DataTransformer
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+import torch
+from torch import optim
+import torch.nn.functional as F
+
+from autoencoder import AttnParams, CustomVAE
 
 def train():
 
@@ -13,7 +20,63 @@ def train():
     7. Loss = MSE btwn spectrograms
     8. Cann also convert spectrogram -> waveform -> audiofile if you want to hear what it actually sounds like  
     """
-    pass
+
+    # Setup Dataset
+    dataset = CleanDataset(chunk_size = 30_000)
+    train_loader = DataLoader(dataset, batch_size = 4, shuffle = True)
+
+    # Setup Transformer & Augmenter
+    data_transformer = DataTransformer()
+    noise_generator = NoiseGenerator()
+
+    # Setup Model & Optimizer
+    attn_params = AttnParams(num_heads=4, window_size=None, use_rel_pos_bias=False, dim_head=64)
+    model = CustomVAE(in_channels=2, spatial_dims=2, use_attn=True, attn_params=attn_params)
+
+    if torch.backends.mps.is_available():  # Apple Silicon GPU
+        device = 'mps'
+    elif torch.cuda.is_available():        # Nvidia GPU
+        device = 'cuda'
+    else:
+        device = 'cpu'
+
+    model = model.to(device)
+    print(f"Using device: {device}")
+
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+
+
+    # Perform the Training
+    model.train()
+    for waveform, _ in tqdm(train_loader, "Training:"):
+        # 1. Get Clean Chunk
+        amp_clean, phase_clean, _ = data_transformer.waveform_to_spectrogram(waveform)
+        _, W,H = amp_clean.shape
+
+        # 2. Add Noise
+        noisy_waveform = noise_generator.add_gaussian(waveform)
+        amp_noisy, phase_noisy, _ = data_transformer.waveform_to_spectrogram(noisy_waveform)
+        
+        # 3. Prepare Input to Model
+        amp_inp, phase_inp = data_transformer.add_padding(amp_noisy), data_transformer.add_padding(phase_noisy)
+        input = torch.stack((amp_inp, phase_inp), axis = 1)
+        input = input.to(device)
+
+        # 4. Run model & get loss
+        output = model(input)
+        output = output[:, :, :W, :H]  # crop back to original size
+        target = torch.stack((amp_clean, phase_clean), axis = 1).to(device)
+        loss = F.mse_loss(output, target)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # print(loss.item())
+
+        
+
+
 
 if __name__ == '__main__':
     train()

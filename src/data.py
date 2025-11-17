@@ -41,7 +41,7 @@ class CleanDataset(Dataset):
     def __init__(self, split="train-clean-100", chunk_size: int = 50_000):
         # (waveform, sample_rate, transcript, speaker_id, chapter_id, utterance_id)
         self.dataset = torchaudio.datasets.LIBRISPEECH(
-            root = './voice_data',
+            root = '../voice_data',
             url = split,
             download = True,
         )
@@ -59,7 +59,10 @@ def get_chunk(waveform: torch.Tensor, chunk_size: int):
     """
     Takes in a 1D waveform and chunks it randomly w/ fixed size
     """
-    idx = np.random.randint(0, len(waveform) - chunk_size)
+    try:
+        idx = np.random.randint(0, len(waveform) - chunk_size)
+    except ValueError:
+        print("Waveform too short?", "w", len(waveform), "chunk", chunk_size)
 
     return waveform[idx:idx + chunk_size]
 
@@ -145,9 +148,11 @@ class DataTransformer:
         """
         return amp_norm * (max_db - min_db) + min_db
 
-    def waveform_to_spectrogram(self, waveform: torch.Tensor):
+    def waveform_to_spectrogram(self, waveform: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, tuple[float, float]]:
         """
         Waveform -> Phase & Amplitude spectrograms
+
+        note: normalization occurs automatically
         """
         
         n_fft = self.nfft

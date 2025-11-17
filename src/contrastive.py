@@ -4,8 +4,8 @@ import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 import tqdm
-from src.data import CleanDataset, CleanDatasetIterable
-from src.data import NoiseGenerator, DataTransformer
+from data import CleanDataset, CleanDatasetIterable
+from data import NoiseGenerator, DataTransformer
 
 def train_contrastive(Encoder, Decoder, latent_dim, Dataset, batch_size, epochs, device, tau: float = .07): 
     """
