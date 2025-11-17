@@ -67,15 +67,15 @@ class NoiseGenerator:
     """
     Contains a set of methods for adding noise to clean signals
 
-    These methods are called in the train script
+    These methods preserve the shape of the waveform passed in 
     """
 
     def __init__(self):
         # Download all the enviornment noise options? 
         pass
 
-    def add_gaussian(self, amplitude: float):
-        pass
+    def add_gaussian(self, waveform: torch.Tensor, sigma: float = 1):
+        return waveform + torch.rand_like(waveform) * sigma
 
     def add_environment(self, category: str):
         pass
@@ -292,6 +292,11 @@ if __name__ == '__main__':
 
     waveforms_reconstr = td.spectrogram_to_waveform(amp, phase, min_db, max_db)
     td.waveform_to_audio(waveforms_reconstr, rate, fname = 'outputs/reconstr')
+
+    # Testing Noise
+    ng = NoiseGenerator()
+    noisy_wave = ng.add_gaussian(wave, sigma = .01)
+    td.waveform_to_audio(noisy_wave, rate, 'outputs/noisy')
 
 
 
