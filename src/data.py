@@ -48,8 +48,7 @@ class CleanDataset(Dataset):
             download = True,
         )
         if count is not None:
-            print(type(self.dataset))
-            self.dataset = Subset(self.dataset, indices= range(count))
+            self.dataset = Subset(self.dataset, indices= range(min(count, len(self.dataset))))
 
         self.chunk_size = chunk_size
 

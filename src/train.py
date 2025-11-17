@@ -12,9 +12,11 @@ from display_utils import plot_learning_curve
 
 from autoencoder import AttnParams, CustomVAE
 
-num_epochs = 500
+num_epochs = 30
 dataset_size = 1000
 beta = 0
+batch_size = 16
+
 output_folder = Path('../outputs')
 output_folder.mkdir(exist_ok=True)
 
@@ -35,7 +37,7 @@ def vae_loss(output, target, z_mean, log_var, beta):
 def train():
     # Setup Dataset
     dataset = CleanDataset(chunk_size = 30_000, count = dataset_size)
-    train_loader = DataLoader(dataset, batch_size = 4, shuffle = True)
+    train_loader = DataLoader(dataset, batch_size = batch_size, shuffle = True)
 
     # Setup Transformer & Augmenter
     data_transformer = DataTransformer()
@@ -43,7 +45,8 @@ def train():
 
     # Setup Model & Optimizer
     attn_params = AttnParams(num_heads=4, window_size=None, use_rel_pos_bias=False, dim_head=64)
-    model = CustomVAE(in_channels=2, spatial_dims=2, use_attn=True, attn_params=attn_params, vae_use_log_var = True, beta = beta)
+    model = CustomVAE(in_channels=2, spatial_dims=2, use_attn=True,
+                      attn_params=attn_params, vae_use_log_var = True, beta = beta)
 
     if torch.backends.mps.is_available():  # Apple Silicon GPU
         device = 'mps'
@@ -78,7 +81,8 @@ def train():
             target = torch.stack((amp_clean, phase_clean), axis = 1).to(device)
             
             # 2. Add Noise
-            noisy_waveform = noise_generator.add_gaussian(waveform, sigma = .01)
+            # noisy_waveform = noise_generator.add_gaussian(waveform, sigma = .01)
+            noisy_waveform = waveform
             amp_noisy, phase_noisy, _ = data_transformer.waveform_to_spectrogram(noisy_waveform)
             
             # 3. Prepare Input to Model
