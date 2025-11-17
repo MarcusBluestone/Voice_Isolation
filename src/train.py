@@ -63,10 +63,18 @@ def train():
         input = input.to(device)
 
         # 4. Run model & get loss
-        output = model(input)
+        output, z_mean, log_var = model(input)
+        
+        kl_per_elem = -0.5 * torch.sum(1 + log_var - z_mean.pow(2) - log_var.exp())
+        # flatten all non-batch dims:
+        kl_per_sample = kl_per_elem.view(kl_per_elem.size(0), -1).sum(dim=1)  # (B,)
+        kl = kl_per_sample.mean()
         output = output[:, :, :W, :H]  # crop back to original size
         target = torch.stack((amp_clean, phase_clean), axis = 1).to(device)
-        loss = F.mse_loss(output, target)
+        recon = F.mse_loss(output, target, reduction="none")
+        recon = recon.view(recon.size(0), -1).mean(dim=1)         # per-sample mean
+        recon_loss = recon.mean()  
+        loss =  recon_loss + kl
 
         optimizer.zero_grad()
         loss.backward()

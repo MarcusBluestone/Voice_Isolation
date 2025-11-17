@@ -312,7 +312,7 @@ class CustomVAE(nn.Module):
         #     vae_loss =  recon_loss + self.beta * kl
             
         #     return decoded, vae_loss
-        return decoded
+        return decoded, z_mean, logvar
     
     def encode(self, x):
         # Input to the first layer should be (B, C, D, H, W)
