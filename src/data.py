@@ -9,6 +9,8 @@ import torch.nn.functional as F
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+from tqdm import tqdm
+
 class CleanDatasetIterable(IterableDataset):
     """
     Streams the Data from Hugging Face. This avoids memory overhead
@@ -45,8 +47,22 @@ class CleanDataset(Dataset):
             url = split,
             download = True,
         )
-
         self.chunk_size = chunk_size
+
+        # Filter samples whose waveform is shorter than chunk_size
+        # self.indices = []
+        # bad_files = 0
+        # for idx in tqdm(range(len(self.dataset)), "Pruning Dataset of Corruped or Small Files"):
+        #     try:
+        #         waveform, _, _, _, _, _ = self.dataset[idx]
+        #         if waveform.shape[1] >= chunk_size:
+        #             self.indices.append(idx)
+        #     except RuntimeError:
+        #         print('here')
+        #         bad_files += 1
+
+        # print(f"Filtered dataset: kept {len(self.indices)} / {len(self.dataset)} examples")
+        # print(f"There are {bad_files} bad files")
 
     def __len__(self):
         return len(self.dataset)
@@ -58,12 +74,13 @@ class CleanDataset(Dataset):
 def get_chunk(waveform: torch.Tensor, chunk_size: int):
     """
     Takes in a 1D waveform and chunks it randomly w/ fixed size
+    
+    If its shorter than chunk size, then pad it and return it
     """
-    try:
-        idx = np.random.randint(0, len(waveform) - chunk_size)
-    except ValueError:
-        print("Waveform too short?", "w", len(waveform), "chunk", chunk_size)
+    if len(waveform) < chunk_size:
+        return torch.nn.functional.pad(waveform, pad = (0, chunk_size - len(waveform)))
 
+    idx = np.random.randint(0, 1 + len(waveform) - chunk_size)
     return waveform[idx:idx + chunk_size]
 
 class NoiseGenerator:

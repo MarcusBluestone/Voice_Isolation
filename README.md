@@ -16,11 +16,13 @@ conda env export > conda_env.yaml
 
 To experiment w/ dataset:
 ```
-python -m src.data
+cd src
+python -m data
 ```
 
 Run with:
 ```
-python -m src.train
+cd src
+python -m train
 ```
 
