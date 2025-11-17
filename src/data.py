@@ -9,7 +9,6 @@ import torch.nn.functional as F
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 
 class CleanDatasetIterable(IterableDataset):
     """

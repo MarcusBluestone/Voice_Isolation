@@ -31,7 +31,7 @@ def train():
 
     # Setup Model & Optimizer
     attn_params = AttnParams(num_heads=4, window_size=None, use_rel_pos_bias=False, dim_head=64)
-    model = CustomVAE(in_channels=2, spatial_dims=2, use_attn=True, attn_params=attn_params)
+    model = CustomVAE(in_channels=2, spatial_dims=2, use_attn=True, attn_params=attn_params, vae_use_log_var = True)
 
     if torch.backends.mps.is_available():  # Apple Silicon GPU
         device = 'mps'
@@ -64,24 +64,24 @@ def train():
 
         # 4. Run model & get loss
         output, z_mean, log_var = model(input)
-        
-        kl_per_elem = -0.5 * torch.sum(1 + log_var - z_mean.pow(2) - log_var.exp())
-        # flatten all non-batch dims:
-        kl_per_sample = kl_per_elem.view(kl_per_elem.size(0), -1).sum(dim=1)  # (B,)
-        kl = kl_per_sample.mean()
+
+        # KL Loss
+        kl = -0.5 * torch.sum(1 + log_var - z_mean.pow(2) - log_var.exp(), dim = 1)
+        kl = kl.mean()
+
+        # Reconstruction loss
         output = output[:, :, :W, :H]  # crop back to original size
         target = torch.stack((amp_clean, phase_clean), axis = 1).to(device)
-        recon = F.mse_loss(output, target, reduction="none")
-        recon = recon.view(recon.size(0), -1).mean(dim=1)         # per-sample mean
-        recon_loss = recon.mean()  
+
+        recon_loss = F.mse_loss(output, target, reduction="none")
+        recon_loss = recon_loss.view(recon_loss.size(0), -1).mean(dim=1) # per-sample mean
+        recon_loss = recon_loss.mean() # average across batch
+
         loss =  recon_loss + kl
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-
-        # print(loss.item())
-
         
 
 
