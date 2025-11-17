@@ -1,4 +1,5 @@
 __pycache__
 voice_data/*
-outputs/
+outputs*/
 *copy
+*.pth

@@ -9,18 +9,6 @@ import torch.nn.functional as F
 from autoencoder import AttnParams, CustomVAE
 
 def train():
-
-    """
-    1. Sample chunk
-    2. Add noise to chunk
-    3. Convert into spectrogram of phase & amplitude
-    4. Reshape to (256, 256)
-    5. Input into Model
-    6. Reshape output back into original size
-    7. Loss = MSE btwn spectrograms
-    8. Cann also convert spectrogram -> waveform -> audiofile if you want to hear what it actually sounds like  
-    """
-
     # Setup Dataset
     dataset = CleanDataset(chunk_size = 30_000)
     train_loader = DataLoader(dataset, batch_size = 4, shuffle = True)
@@ -54,7 +42,7 @@ def train():
         _, W,H = amp_clean.shape
 
         # 2. Add Noise
-        noisy_waveform = noise_generator.add_gaussian(waveform)
+        noisy_waveform = noise_generator.add_gaussian(waveform, sigma = .01)
         amp_noisy, phase_noisy, _ = data_transformer.waveform_to_spectrogram(noisy_waveform)
         
         # 3. Prepare Input to Model
@@ -82,6 +70,9 @@ def train():
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+    torch.save(model.state_dict(), "./outputs/model.pth")
+
         
 
 
