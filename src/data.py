@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 class CleanDatasetIterable(IterableDataset):
     """
@@ -181,8 +182,8 @@ class DataTransformer:
         # 2. Calculate Phase
         phase = torch.angle(stft)
 
-        # Phase: scale to [-1,1]
-        phase = phase / torch.pi
+        # Phase: scale to [0,1]
+        phase = (phase / torch.pi + 1) / 2
 
         return amplitude, phase, (min_db, max_db)
     
@@ -198,8 +199,8 @@ class DataTransformer:
         power = 10 ** (amplitude / 10) 
         magnitude = torch.sqrt(power)
 
-        # phase: [-1,1] → [-pi, pi]
-        phase = phase * torch.pi
+        # phase: [0,1] → [-pi, pi]
+        phase = (2 * phase - 1) * torch.pi
 
         stft_recon = magnitude * torch.exp(1j * phase)  # complex tensor
 
@@ -229,7 +230,7 @@ class DataTransformer:
 
         Args:
             amp: (B, H, W) amplitude spectrograms, values in [0,1]
-            phase: (B, H, W) phase spectrograms, values in [-1,1]
+            phase: (B, H, W) phase spectrograms, values in [0,1]
             out_dir: directory to save images
         """
         os.makedirs(out_dir, exist_ok=True)
@@ -243,15 +244,15 @@ class DataTransformer:
             axes[0].set_title('Amplitude')
             # axes[0].set_xlabel('Time Frames')
             # axes[0].set_ylabel('Frequency Bins')
-            axes[0].axis('off')
+            # axes[0].yaxis('off')
             fig.colorbar(im0, ax=axes[0])
 
             # --- Phase ---
-            im1 = axes[1].imshow(phase[idx].cpu().numpy(), cmap='twilight', vmin=-1.0, vmax=1.0, origin='lower')
+            im1 = axes[1].imshow(phase[idx].cpu().numpy(), cmap='twilight', origin='lower')
             axes[1].set_title('Phase')
             # axes[1].set_xlabel('Time Frames')
             # axes[0].set_ylabel('Frequency Bins')
-            axes[1].axis('off')
+            # axes[1].axis('off')
             fig.colorbar(im1, ax=axes[1])
 
             plt.tight_layout()
@@ -279,6 +280,7 @@ if __name__ == '__main__':
     # note that if u choose iterable, must have shuffle = False in dataloader
 
     # dataset = CleanDatasetIterable(chunk_size = 50_000)
+    out_dir = Path('../outputs')
     dataset = CleanDataset(chunk_size = 50_000)
 
     td = DataTransformer()
@@ -290,10 +292,10 @@ if __name__ == '__main__':
     print(wave.shape)
     print(rate.shape)
 
-    td.waveform_to_audio(wave, rate, fname = 'outputs/original')
+    td.waveform_to_audio(wave, rate, fname = out_dir / 'original')
 
     amp, phase, (min_db, max_db) = td.waveform_to_spectrogram(wave)
-    td.save_spectrogram(amp, phase)
+    td.save_spectrogram(amp, phase, out_dir = out_dir)
 
     print("\nBatched Spectrogram sizes")
     print(amp.shape)
@@ -305,12 +307,12 @@ if __name__ == '__main__':
     print(phase_res.shape)
 
     waveforms_reconstr = td.spectrogram_to_waveform(amp, phase, min_db, max_db)
-    td.waveform_to_audio(waveforms_reconstr, rate, fname = 'outputs/reconstr')
+    td.waveform_to_audio(waveforms_reconstr, rate, fname = out_dir / 'reconstr')
 
     # Testing Noise
     ng = NoiseGenerator()
     noisy_wave = ng.add_gaussian(wave, sigma = .01)
-    td.waveform_to_audio(noisy_wave, rate, 'outputs/noisy')
+    td.waveform_to_audio(noisy_wave, rate, out_dir / 'noisy')
 
 
 

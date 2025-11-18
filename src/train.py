@@ -12,9 +12,9 @@ from display_utils import plot_learning_curve
 
 from autoencoder import AttnParams, CustomVAE
 
-num_epochs = 30
-dataset_size = 1000
-beta = 0
+num_epochs = 100
+dataset_size = 1
+beta = 0.1
 batch_size = 16
 
 output_folder = Path('../outputs')
@@ -24,13 +24,14 @@ def vae_loss(output, target, z_mean, log_var, beta):
     assert output.shape == target.shape
 
     # KL Loss
-    kl = -0.5 * torch.sum(1 + log_var - z_mean.pow(2) - log_var.exp(), dim=1)
-    kl = kl.mean()
+    kl = -0.5 * torch.mean(
+        torch.sum(1 + log_var - z_mean.pow(2) - log_var.exp(), dim=1)
+    )
 
     # Reconstruction loss
     recon_loss = F.mse_loss(output, target, reduction="none")
     recon_loss = recon_loss.view(recon_loss.size(0), -1).mean(dim=1) # per-sample mean
-    recon_loss = recon_loss.mean() # average across batch
+    recon_loss = recon_loss.mean()
 
     return recon_loss, kl, recon_loss + beta * kl
 
@@ -47,7 +48,7 @@ def train():
     attn_params = AttnParams(num_heads=4, window_size=None, use_rel_pos_bias=False, dim_head=64)
     model = CustomVAE(in_channels=2, spatial_dims=2, use_attn=True,
                       attn_params=attn_params, vae_use_log_var = True, beta = beta)
-
+    
     if torch.backends.mps.is_available():  # Apple Silicon GPU
         device = 'mps'
     elif torch.cuda.is_available():        # Nvidia GPU
@@ -76,6 +77,8 @@ def train():
         for waveform, _ in tqdm(train_loader, f"Training Epoch #{epoch}:"):
             # 1. Get Clean Chunk
             amp_clean, phase_clean, _ = data_transformer.waveform_to_spectrogram(waveform)
+            print("Amp", amp_clean.min(), amp_clean.max())
+            print("Phase", phase_clean.min(), phase_clean.max())
             _, W,H = amp_clean.shape
 
             target = torch.stack((amp_clean, phase_clean), axis = 1).to(device)
@@ -92,6 +95,7 @@ def train():
 
             # 4. Run model & get loss
             output, z_mean, log_var = model(input)
+            output = torch.clamp(output, 0, 1)
 
             recon_loss, kl_loss, loss = vae_loss(output[:, :, :W, :H], target, z_mean, log_var, beta = beta)
 
@@ -108,6 +112,9 @@ def train():
         epoch_recon_losses.append(total_recon_loss / len(train_loader))
 
         print("Loss:", epoch_total_losses[-1])
+        print("KL Loss:", epoch_kl_losses[-1])
+        print("Recon Loss:", epoch_recon_losses[-1])
+
         plot_learning_curve({
             'total_loss': epoch_total_losses,
             'kl_loss': epoch_kl_losses,
@@ -115,6 +122,7 @@ def train():
         }, Path(output_folder /'lc.png'))
 
     torch.save(model.state_dict(), output_folder / "model.pth")
+    print(f"Saved Model to {output_folder}")
 
         
 

@@ -284,6 +284,7 @@ class CustomVAE(nn.Module):
         net_input = x
         z_mean, z_sigma, eps, logvar = self.encode(x)
         z_sample = self.sample(z_mean, z_sigma, eps)
+        # z_sample = z_mean
         decoded = self.decode(z_sample)
         if self.debug_mode:
             print("Z_mean shape:", z_mean.shape)
