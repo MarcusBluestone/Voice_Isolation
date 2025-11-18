@@ -95,7 +95,7 @@ def train():
 
             # 4. Run model & get loss
             output, z_mean, log_var = model(input)
-            output = torch.clamp(output, 0, 1)
+            # output = torch.clamp(output, 0, 1)
 
             recon_loss, kl_loss, loss = vae_loss(output[:, :, :W, :H], target, z_mean, log_var, beta = beta)
 
