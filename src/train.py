@@ -12,10 +12,11 @@ from display_utils import plot_learning_curve
 
 from autoencoder import AttnParams, CustomVAE
 
-num_epochs = 100
+num_epochs = 200
 dataset_size = 1
 beta = 0
 batch_size = 16
+sigma_noise = 0.01
 
 output_folder = Path('../outputs')
 output_folder.mkdir(exist_ok=True)
@@ -30,10 +31,8 @@ def vae_loss(output, target, z_mean, log_var, beta):
 
     # Reconstruction loss
     recon_loss = F.mse_loss(output, target, reduction="none")
-    print("here", recon_loss.shape)
-    print("here2", recon_loss.view(recon_loss.size(0), -1).shape)
     recon_loss = recon_loss.view(recon_loss.size(0), -1).mean(dim=1) # per-sample mean
-    recon_loss = recon_loss.mean()
+    recon_loss = recon_loss.mean() # per batch mean
 
     return recon_loss, kl, recon_loss + beta * kl
 
@@ -48,7 +47,7 @@ def train():
 
     # Setup Model & Optimizer
     attn_params = AttnParams(num_heads=4, window_size=None, use_rel_pos_bias=False, dim_head=64)
-    model = CustomVAE(in_channels=2, spatial_dims=2, use_attn=False, vae_latent_channels=16,
+    model = CustomVAE(in_channels=1, spatial_dims=2, use_attn=False, vae_latent_channels=16,
                       attn_params=attn_params, vae_use_log_var = True, beta = beta, dropout_prob=0, blocks_down=(1,),
                       blocks_up = [])
     
@@ -65,70 +64,50 @@ def train():
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
     # Metrics
-    epoch_total_losses = []
-    epoch_recon_losses = []
-    epoch_kl_losses = []
+    per_epoch_loss = {
+        'loss': [],
+        'recon_loss': [],
+        'kl_loss': [],
+    }
 
     # Perform the Training
     model.train()
     for epoch in range(1, num_epochs+1):
-
-        total_loss = 0
-        total_recon_loss = 0
-        total_kl_loss = 0
+        loss_dict = { name : 0 for name in per_epoch_loss.keys() }
 
         for waveform, _ in tqdm(train_loader, f"Training Epoch #{epoch}:"):
             # 1. Get Clean Chunk
-            amp_clean, phase_clean, _ = data_transformer.waveform_to_spectrogram(waveform)
-            print("Amp", amp_clean.min(), amp_clean.max())
-            print("Phase", phase_clean.min(), phase_clean.max())
+            amp_clean, _, _ = data_transformer.waveform_to_spectrogram(waveform)
             _, W,H = amp_clean.shape
 
-            target = torch.stack((amp_clean, phase_clean), axis = 1).to(device)
-            print(target.shape)
+            target = amp_clean.to(device).unsqueeze(0)
 
             # 2. Add Noise
-            # noisy_waveform = noise_generator.add_gaussian(waveform, sigma = .01)
-            noisy_waveform = waveform
-            amp_noisy, phase_noisy, _ = data_transformer.waveform_to_spectrogram(noisy_waveform)
+            noisy_waveform = noise_generator.add_gaussian(waveform, sigma = sigma_noise)
+            amp_noisy, _, _ = data_transformer.waveform_to_spectrogram(noisy_waveform)
             
             # 3. Prepare Input to Model
-            input = torch.stack((amp_noisy, phase_noisy), axis = 1)
-            print("MSE Clean vs noisy:", ((input.cpu() - target.cpu()) ** 2).mean().item())
-            input = data_transformer.add_padding(input)
-            input = input.to(device)
+            input = data_transformer.add_padding(amp_noisy).unsqueeze(0).to(device)
 
             # 4. Run model & get loss
             output, z_mean, log_var = model(input)
-            output = F.tanh(output)
-            # output = torch.clamp(output, 0, 1)
-            print("Test", (output[:, 0, :W, :H] + output[:, 1, :W, :H]).flatten()[:15])
-            print("printing")
-            print(output.shape)
-            print(target.shape)
-            recon_loss, kl_loss, loss = vae_loss(output[:, :, :W, :H], target, z_mean, log_var, beta = beta)
+            amp_recon = torch.tanh(output)[:, :, :W, :H]
 
-            total_loss += loss.item()
-            total_recon_loss += recon_loss.item()
-            total_kl_loss += kl_loss.item()
+            recon_loss, kl_loss, loss = vae_loss(amp_recon, target, z_mean, log_var, beta = beta)
+
+            loss_dict['loss'] += loss.cpu().detach()
+            loss_dict['kl_loss'] += kl_loss.cpu().detach()
+            loss_dict['recon_loss'] += recon_loss.cpu().detach()
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
         
-        epoch_total_losses.append(total_loss / len(train_loader))
-        epoch_kl_losses.append(total_kl_loss / len(train_loader))
-        epoch_recon_losses.append(total_recon_loss / len(train_loader))
+        for loss_name in per_epoch_loss.keys():
+            per_epoch_loss[loss_name].append(loss_dict[loss_name] / len(train_loader))
 
-        print("Loss:", epoch_total_losses[-1])
-        print("KL Loss:", epoch_kl_losses[-1])
-        print("Recon Loss:", epoch_recon_losses[-1])
 
-        plot_learning_curve({
-            'total_loss': epoch_total_losses,
-            'kl_loss': epoch_kl_losses,
-            'recon_loss': epoch_recon_losses
-        }, Path(output_folder /'lc.png'))
+        plot_learning_curve(per_epoch_loss, Path(output_folder /'lc.png'))
 
     torch.save(model.state_dict(), output_folder / "model.pth")
     print(f"Saved Model to {output_folder}")

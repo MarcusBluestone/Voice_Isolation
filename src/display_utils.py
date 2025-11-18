@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-def plot_learning_curve(values_dict: dict, fpath: Path):
-    _, ax = plt.subplots(figsize=(8, 15))
+def plot_learning_curve(loss_dict: dict, fpath: Path):
+    _, ax = plt.subplots(figsize=(14, 8))
 
-    for name, values in values_dict.items():
+    for name, values in loss_dict.items():
         ax.plot(values, label = name)
         ax.set_xlabel("Steps")
 

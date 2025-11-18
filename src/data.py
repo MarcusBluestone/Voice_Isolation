@@ -66,8 +66,8 @@ def get_chunk(waveform: torch.Tensor, chunk_size: int):
     
     If its shorter than chunk size, then pad it and return it
     """
-    # if len(waveform) < chunk_size:
-    #     return torch.nn.functional.pad(waveform, pad = (0, chunk_size - len(waveform)))
+    if len(waveform) < chunk_size:
+        return torch.nn.functional.pad(waveform, pad = (0, chunk_size - len(waveform)))
 
     idx = np.random.randint(0, 1 + len(waveform) - chunk_size)
     idx = 0
