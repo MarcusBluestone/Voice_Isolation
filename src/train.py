@@ -94,6 +94,7 @@ def train():
             
             # 3. Prepare Input to Model
             input = torch.stack((amp_noisy, phase_noisy), axis = 1)
+            print("MSE Clean vs noisy:", ((input.cpu() - target.cpu()) ** 2).mean().item())
             input = data_transformer.add_padding(input)
             input = input.to(device)
 

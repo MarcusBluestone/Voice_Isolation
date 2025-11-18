@@ -184,7 +184,7 @@ class DataTransformer:
         # 2. Calculate Phase
         phase = torch.angle(stft)
 
-        # Phase: scale to [0,1]
+        # Phase: scale to [-1,1]
         # phase = (phase / torch.pi + 1) / 2
         phase = phase / torch.pi #[-1, 1]
 
@@ -197,14 +197,15 @@ class DataTransformer:
 
         - note that min_db and max_db from the original (pre-normalized amp spectrogram) are required
         """
+        amplitude = (amplitude + 1) / 2
         amplitude = self._denormalize_amplitude(amplitude, min_db, max_db)
 
         # convert from dB to linear power
         power = 10 ** (amplitude / 10) 
         magnitude = torch.sqrt(power)
 
-        # phase: [0,1] → [-pi, pi]
-        phase = (2 * phase - 1) * torch.pi
+        # phase: [-1,1] → [-pi, pi]
+        phase = (phase + 1)/2 * torch.pi
 
         stft_recon = magnitude * torch.exp(1j * phase)  # complex tensor
 
