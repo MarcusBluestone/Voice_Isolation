@@ -66,10 +66,11 @@ def get_chunk(waveform: torch.Tensor, chunk_size: int):
     
     If its shorter than chunk size, then pad it and return it
     """
-    if len(waveform) < chunk_size:
-        return torch.nn.functional.pad(waveform, pad = (0, chunk_size - len(waveform)))
+    # if len(waveform) < chunk_size:
+    #     return torch.nn.functional.pad(waveform, pad = (0, chunk_size - len(waveform)))
 
     idx = np.random.randint(0, 1 + len(waveform) - chunk_size)
+    idx = 0
     return waveform[idx:idx + chunk_size]
 
 class NoiseGenerator:
@@ -179,11 +180,14 @@ class DataTransformer:
         amplitude = torchaudio.transforms.AmplitudeToDB(stype='power', top_db = 80)(power) # 10 * log_10(power)
         amplitude, min_db, max_db = self._normalize_amplitude(amplitude)
 
+        amplitude = amplitude * 2 -1
         # 2. Calculate Phase
         phase = torch.angle(stft)
 
         # Phase: scale to [0,1]
-        phase = (phase / torch.pi + 1) / 2
+        # phase = (phase / torch.pi + 1) / 2
+        phase = phase / torch.pi #[-1, 1]
+
 
         return amplitude, phase, (min_db, max_db)
     
