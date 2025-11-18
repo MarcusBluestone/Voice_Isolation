@@ -30,6 +30,8 @@ def vae_loss(output, target, z_mean, log_var, beta):
 
     # Reconstruction loss
     recon_loss = F.mse_loss(output, target, reduction="none")
+    print("here", recon_loss.shape)
+    print("here2", recon_loss.view(recon_loss.size(0), -1).shape)
     recon_loss = recon_loss.view(recon_loss.size(0), -1).mean(dim=1) # per-sample mean
     recon_loss = recon_loss.mean()
 
@@ -97,8 +99,12 @@ def train():
 
             # 4. Run model & get loss
             output, z_mean, log_var = model(input)
+            output = F.tanh(output)
             # output = torch.clamp(output, 0, 1)
-
+            print("Test", (output[:, 0, :W, :H] + output[:, 1, :W, :H]).flatten()[:15])
+            print("printing")
+            print(output.shape)
+            print(target.shape)
             recon_loss, kl_loss, loss = vae_loss(output[:, :, :W, :H], target, z_mean, log_var, beta = beta)
 
             total_loss += loss.item()

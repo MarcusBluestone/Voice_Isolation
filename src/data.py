@@ -244,7 +244,7 @@ class DataTransformer:
             fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 
             # --- Amplitude ---
-            im0 = axes[0].imshow(amp[idx].cpu().numpy(), cmap='magma', origin='lower')
+            im0 = axes[0].imshow(amp[idx].cpu().numpy(), cmap='magma', vmin = -1, vmax = 1, origin='lower')
             axes[0].set_title('Amplitude')
             # axes[0].set_xlabel('Time Frames')
             # axes[0].set_ylabel('Frequency Bins')
@@ -252,7 +252,7 @@ class DataTransformer:
             fig.colorbar(im0, ax=axes[0])
 
             # --- Phase ---
-            im1 = axes[1].imshow(phase[idx].cpu().numpy(), cmap='twilight', origin='lower')
+            im1 = axes[1].imshow(phase[idx].cpu().numpy(), cmap='magma', vmin =-1, vmax = 1, origin='lower')
             axes[1].set_title('Phase')
             # axes[1].set_xlabel('Time Frames')
             # axes[0].set_ylabel('Frequency Bins')

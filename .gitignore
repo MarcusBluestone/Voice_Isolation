@@ -3,3 +3,4 @@ voice_data/*
 *outputs*/
 *copy
 *.pth
+*.png
