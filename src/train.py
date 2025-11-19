@@ -1,6 +1,7 @@
 from tqdm import tqdm
 from pathlib import Path
 import pandas as pd
+import numpy as np
 
 import torch
 from torch.utils.data import DataLoader
@@ -18,6 +19,7 @@ dataset_size = 200
 beta = 0
 batch_size = 16
 sigma_noise = 0.01
+model_criteria = 'val_loss'
 
 output_folder = Path('../outputs')
 output_folder.mkdir(exist_ok=True)
@@ -92,8 +94,8 @@ def train():
     # Setup Model & Optimizer
     attn_params = AttnParams(num_heads=4, window_size=None, use_rel_pos_bias=False, dim_head=64)
     model = CustomVAE(in_channels=1, spatial_dims=2, use_attn=False, vae_latent_channels=16,
-                      attn_params=attn_params, vae_use_log_var = True, beta = beta, dropout_prob=0, blocks_down=(1,),
-                      blocks_up = [])
+                      attn_params=attn_params, vae_use_log_var = True, beta = beta, dropout_prob=0, blocks_down=(1,2,2,4),
+                      blocks_up = [1,1,1])
     
     if torch.backends.mps.is_available():  # Apple Silicon GPU
         device = 'mps'
@@ -159,8 +161,9 @@ def train():
         plot_learning_curve(per_epoch_loss, Path(output_folder /'lc.png'))
         pd.DataFrame(per_epoch_loss).to_csv(output_folder / 'epoch_metrics.csv')
 
-    torch.save(model.state_dict(), output_folder / "model.pth")
-    print(f"Saved Model to {output_folder}")
+        if per_epoch_loss[model_criteria][-1] <= np.min(per_epoch_loss[model_criteria]):
+            torch.save(model.state_dict(), output_folder / "model.pth")
+            print(f"Saved Model to {output_folder}")
 
         
 
