@@ -2,6 +2,7 @@ from tqdm import tqdm
 from pathlib import Path
 import pandas as pd
 import numpy as np
+import json
 
 import torch
 from torch.utils.data import DataLoader
@@ -15,16 +16,19 @@ from evaluate import evaluate
 # from vae import AttnParams, CustomVAE, vae_loss
 from autoencoder import UNet, autoencoder_loss
 
-num_epochs = 25
-dataset_size = 20_000
-batch_size = 16
-sigma_noise = 0.1
-model_criteria = 'val_loss'
 
 output_folder = Path('../outputs')
 output_folder.mkdir(exist_ok=True)
 
-def train():
+def train(params: dict):
+    # Read Params
+    num_epochs = params['num_epochs']
+    dataset_size = params['dataset_size']
+    batch_size = params['batch_size']
+    sigma_noise = params['sigma_noise']
+    model_criteria = params['model_criteria']
+    noise_type = params['noise_type']
+
     # Setup Dataset
     train_dataset = CleanDataset(chunk_size = 30_000, count = dataset_size, split = 'train-clean-100')
     val_dataset = CleanDataset(chunk_size = 30_000, count = 10, split='dev-clean')
@@ -72,7 +76,13 @@ def train():
             target = amp_clean.to(device).unsqueeze(1)
 
             # 2. Add Noise
-            noisy_waveform = noise_generator.add_gaussian(waveform, sigma = sigma_noise)
+            if noise_type == "G":
+                noisy_waveform = noise_generator.add_gaussian(waveform, sigma = sigma_noise)
+            elif noise_type == "E":
+                noisy_waveform = noise_generator.add_environment(waveform, scale = 10)
+            else:
+                raise ValueError(f"Unknown noise type specified: {noise_type}")
+            
             amp_noisy, _, _ = data_transformer.waveform_to_spectrogram(noisy_waveform)
             
             # 3. Prepare Input to Model
@@ -101,7 +111,15 @@ def train():
             torch.save(model.state_dict(), output_folder / "model.pth")
             print(f"Saved Model to {output_folder}")
 
-    
+def parse_params(param_path: Path):
+    params = {}
+    with open(param_path, 'r') as f:
+        params = json.load(f)
+
+    return params
 
 if __name__ == '__main__':
-    train()
+    param_path = Path('../params/run1.json')
+    params = parse_params(param_path)
+
+    train(params)

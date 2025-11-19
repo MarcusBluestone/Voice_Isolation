@@ -1,0 +1,8 @@
+{
+  "num_epochs": 25,
+  "dataset_size": 20000,
+  "batch_size": 16,
+  "noise_type": "G", 
+  "sigma_noise": 0.01,
+  "model_criteria": "val_loss"
+}
