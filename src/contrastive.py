@@ -13,7 +13,7 @@ from data_contrastive import AugmentedDataset
 from data import NoiseGenerator, DataTransformer
 from display_utils import plot_learning_curve
 
-from autoencoder import AttnParams, CustomVAE
+from vae import AttnParams, CustomVAE
 
 from train import vae_loss, train
 
