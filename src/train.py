@@ -6,7 +6,6 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torch import optim
-import torch.nn.functional as F
 
 from data import CleanDataset
 from data import NoiseGenerator, DataTransformer
@@ -17,9 +16,9 @@ from evaluate import evaluate
 from autoencoder import UNet, autoencoder_loss
 
 num_epochs = 25
-dataset_size = 200
+dataset_size = 20_000
 batch_size = 16
-sigma_noise = 0.01
+sigma_noise = 0.1
 model_criteria = 'val_loss'
 
 output_folder = Path('../outputs')
@@ -102,9 +101,7 @@ def train():
             torch.save(model.state_dict(), output_folder / "model.pth")
             print(f"Saved Model to {output_folder}")
 
-        
-
-
+    
 
 if __name__ == '__main__':
     train()

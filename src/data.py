@@ -11,6 +11,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from pathlib import Path
+import kagglehub
 
 class CleanDatasetIterable(IterableDataset):
     """
@@ -70,7 +71,6 @@ def get_chunk(waveform: torch.Tensor, chunk_size: int):
         return torch.nn.functional.pad(waveform, pad = (0, chunk_size - len(waveform)))
 
     idx = np.random.randint(0, 1 + len(waveform) - chunk_size)
-    # idx = 0
     return waveform[idx:idx + chunk_size]
 
 class NoiseGenerator:
@@ -82,13 +82,30 @@ class NoiseGenerator:
 
     def __init__(self):
         # Download all the enviornment noise options? 
-        pass
+        # cached file_path: /Users/user/.cache/kagglehub/datasets/aanhari/demand-dataset/versions/1
+        self.kaggle_path = Path(kagglehub.dataset_download("aanhari/demand-dataset")) / 'demand'  / 'demand'
+        self.categories = [d.name for d in self.kaggle_path.iterdir() if d.is_dir()]
+        print("Noise Categories", self.categories)
 
     def add_gaussian(self, waveform: torch.Tensor, sigma: float = .01):
         return waveform + torch.rand_like(waveform) * sigma
 
-    def add_environment(self, category: str):
-        pass
+    def add_environment(self, waveform_inp: torch.Tensor, category_num: int = -1, scale: float = 1):
+        """
+        Chooses a random category if category_num is -1
+        """
+        if category_num == -1:
+            category_num = np.random.randint(0, len(self.categories))
+        
+        category_path = self.kaggle_path / self.categories[category_num]
+        wav_path = np.random.choice(list(category_path.iterdir()))
+
+        waveform_noise, sample_rate = torchaudio.load(wav_path)
+        waveform_noise = get_chunk(waveform_noise[0], chunk_size = waveform_inp.shape[-1])
+        print(waveform_inp.shape)
+        print(waveform_noise.shape)
+
+        return waveform_inp + waveform_noise * scale
 
     
 class DataTransformer:
@@ -238,7 +255,7 @@ class DataTransformer:
             phase: (B, H, W) phase spectrograms, values in [0,1]
             out_dir: directory to save images
         """
-        os.makedirs(out_dir, exist_ok=True)
+        os.makedirs(out_dir, exist_ok = True)
         batch_size = amp.shape[0]
 
         for idx in range(min(max_save, batch_size)):
@@ -339,7 +356,8 @@ if __name__ == '__main__':
     # note that if u choose iterable, must have shuffle = False in dataloader
 
     # dataset = CleanDatasetIterable(chunk_size = 50_000)
-    out_dir = Path('../outputs')
+    out_dir = Path('../data_outputs')
+    os.makedirs(out_dir, exist_ok=True)
     dataset = CleanDataset(chunk_size = 50_000)
 
     td = DataTransformer()
@@ -354,6 +372,7 @@ if __name__ == '__main__':
     td.waveform_to_audio(wave, rate, fname = out_dir / 'original')
 
     amp, phase, (min_db, max_db) = td.waveform_to_spectrogram(wave)
+    B, W, H = amp.shape
     td.save_spectrogram(amp, phase, out_dir = out_dir)
 
     print("\nBatched Spectrogram sizes")
@@ -368,9 +387,16 @@ if __name__ == '__main__':
     waveforms_reconstr = td.spectrogram_to_waveform(amp, phase, min_db, max_db)
     td.waveform_to_audio(waveforms_reconstr, rate, fname = out_dir / 'reconstr')
 
+    td.save_spectrograms(
+        amps =   [amp, amp_res[:, :W, :H]],
+        phases = [phase, phase_res[:, :W, :H]],
+        names = ['original', 'res'], 
+        out_dir = out_dir / 'spectrograms'
+    )
     # Testing Noise
     ng = NoiseGenerator()
-    noisy_wave = ng.add_gaussian(wave, sigma = .01)
+    noisy_wave = ng.add_environment(wave, category_num = 4, scale = 10)
+    # noisy_wave = ng.add_gaussian(wave, sigma = .01)
     td.waveform_to_audio(noisy_wave, rate, out_dir / 'noisy')
 
 
