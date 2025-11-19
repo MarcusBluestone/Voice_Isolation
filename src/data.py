@@ -70,7 +70,7 @@ def get_chunk(waveform: torch.Tensor, chunk_size: int):
         return torch.nn.functional.pad(waveform, pad = (0, chunk_size - len(waveform)))
 
     idx = np.random.randint(0, 1 + len(waveform) - chunk_size)
-    idx = 0
+    # idx = 0
     return waveform[idx:idx + chunk_size]
 
 class NoiseGenerator:
@@ -264,6 +264,60 @@ class DataTransformer:
             plt.savefig(f'{out_dir}/spec{idx}.png', dpi=150)
             plt.close()
 
+    def save_spectrograms(
+        self, amps: list[torch.Tensor], phases: list[torch.Tensor], names: list[str],
+        out_dir='outputs', max_save=5
+    ):
+        """
+        Saves min(batch_size, max_save) files for a list of amps/phases.
+
+        amps = list of tensors, each shaped (B, H, W)
+        phases = list of tensors, same structure
+        """
+
+        assert len(amps) == len(phases) == len(names)
+
+        os.makedirs(out_dir, exist_ok=True)
+
+        num_files = min(amps[0].shape[0], max_save)  # per-batch samples to save
+        num_rows = len(amps)                         # number of amp/phase pairs
+
+        for idx in range(num_files):
+
+            fig, axes = plt.subplots(
+                num_rows, 2,
+                figsize=(8, 3 * num_rows),
+                constrained_layout=True
+            )
+
+            # If only one row, axes is 1D — unify handling
+            if num_rows == 1:
+                axes = np.expand_dims(axes, axis=0)
+
+            for row in range(num_rows):
+
+                # --- Amplitude ---
+                im0 = axes[row, 0].imshow(
+                    amps[row][idx].cpu().numpy(),
+                    cmap='magma', vmin=-1, vmax=1, origin='lower'
+                )
+                axes[row, 0].set_title(f'{names[row]} - Amplitude')
+                axes[row, 0].axis('off')
+
+                # --- Phase ---
+                im1 = axes[row, 1].imshow(
+                    phases[row][idx].cpu().numpy(),
+                    cmap='magma', vmin=-1, vmax=1, origin='lower'
+                )
+                axes[row, 1].set_title(f'{names[row]} - Phase')
+                axes[row, 1].axis('off')
+
+            # Add one colorbar per column (clean layout)
+            fig.colorbar(im0, ax=axes[:, 0], shrink=0.7)
+            fig.colorbar(im1, ax=axes[:, 1], shrink=0.7)
+
+            fig.savefig(f"{out_dir}/spec_{idx}.png", dpi=150)
+            plt.close(fig)
 
     def add_padding(self, x: torch.Tensor, size: int = 256):
         """
