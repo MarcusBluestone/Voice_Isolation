@@ -17,10 +17,9 @@ from evaluate import evaluate
 from autoencoder import UNet, autoencoder_loss
 
 
-output_folder = Path('../outputs')
-output_folder.mkdir(exist_ok=True)
+def train(params: dict, out_dir: Path):
+    out_dir.mkdir(exist_ok=True)
 
-def train(params: dict):
     # Read Params
     num_epochs = params['num_epochs']
     dataset_size = params['dataset_size']
@@ -104,22 +103,29 @@ def train(params: dict):
             per_epoch_loss[loss_name].append(loss_dict[loss_name] / len(train_loader))
         per_epoch_loss['val_loss'].append(evaluate(model, val_loader, data_transformer, device, noise_generator, sigma_noise))
 
-        plot_learning_curve(per_epoch_loss, Path(output_folder /'lc.png'))
-        pd.DataFrame(per_epoch_loss).to_csv(output_folder / 'epoch_metrics.csv')
+        plot_learning_curve(per_epoch_loss, Path(out_dir /'lc.png'))
+        pd.DataFrame(per_epoch_loss).to_csv(out_dir / 'epoch_metrics.csv')
 
         if per_epoch_loss[model_criteria][-1] <= np.min(per_epoch_loss[model_criteria]):
-            torch.save(model.state_dict(), output_folder / "model.pth")
-            print(f"Saved Model to {output_folder}")
+            torch.save(model.state_dict(), out_dir / "model.pth")
+            print(f"Saved Model to {out_dir}")
 
-def parse_params(param_path: Path):
-    params = {}
-    with open(param_path, 'r') as f:
-        params = json.load(f)
+def parse_params(param_dir: Path):
+    param_runs = []
 
-    return params
+    for file_path in param_dir.iterdir():
+
+        if file_path.is_file():
+            print(f"Reading {file_path.name}") 
+
+        with open(file_path, 'r') as f:
+            param_runs.append(json.load(f))
+
+    return param_runs
 
 if __name__ == '__main__':
-    param_path = Path('../params/run1.json')
-    params = parse_params(param_path)
+    param_dir = Path('../params')
+    param_runs = parse_params(param_dir)
 
-    train(params)
+    for i, params in enumerate(param_runs):
+        train(params, out_dir = Path(f'../outputs/run{i}'))
