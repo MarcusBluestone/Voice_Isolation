@@ -38,10 +38,6 @@ def train():
     noise_generator = NoiseGenerator()
 
     # Setup Model & Optimizer
-    # attn_params = AttnParams(num_heads=4, window_size=None, use_rel_pos_bias=False, dim_head=64)
-    # model = CustomVAE(in_channels=1, spatial_dims=2, use_attn=False, vae_latent_channels=16,
-    #                   attn_params=attn_params, vae_use_log_var = True, beta = beta, dropout_prob=0, blocks_down=(1,2,2,4),
-    #                   blocks_up = [1,1,1])
     model = UNet(input_channels = 1, final_activation='tanh')
     
     if torch.backends.mps.is_available():  # Apple Silicon GPU
@@ -59,8 +55,6 @@ def train():
     # Metrics
     per_epoch_loss = {
         'loss': [],
-        # 'recon_loss': [],
-        # 'kl_loss': [],
         'val_loss': []
     }
 
@@ -69,8 +63,6 @@ def train():
     for epoch in range(1, num_epochs+1):
         loss_dict = { 
             'loss': 0,
-            # 'recon_loss': 0,
-            # 'kl_loss': 0,
         }
 
         for waveform, _ in tqdm(train_loader, f"Training Epoch #{epoch}:"):
@@ -88,16 +80,12 @@ def train():
             input = data_transformer.add_padding(amp_noisy).unsqueeze(1).to(device)
 
             # 4. Run model & get loss
-            # output, z_mean, log_var = model(input)
-            # amp_recon = torch.tanh(output)[:, :, :W, :H]
             output = model(input)
             amp_recon = output[:, :, :W, :H]
 
             # recon_loss, kl_loss, loss = vae_loss(amp_recon, target, z_mean, log_var, beta = beta)
             loss = autoencoder_loss(amp_recon, target)
             loss_dict['loss'] += loss.cpu().detach()
-            # loss_dict['kl_loss'] += kl_loss.cpu().detach()
-            # loss_dict['recon_loss'] += recon_loss.cpu().detach()
 
             optimizer.zero_grad()
             loss.backward()

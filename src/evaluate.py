@@ -12,8 +12,6 @@ def evaluate(model: torch.nn.Module,
     
     loss_metrics = {
         'loss': 0, 
-        'kl_loss': 0,
-        'recon_loss': 0,
     }
 
     model.eval()
@@ -32,18 +30,13 @@ def evaluate(model: torch.nn.Module,
         input = data_transformer.add_padding(amp_noisy).unsqueeze(1).to(device)
 
         # 4. Run model & get loss
-        # output, z_mean, log_var = model(input)
         output = model(input)
         amp_recon = output[:, :, :W, :H]
 
         loss = autoencoder_loss(amp_recon, target)
 
-        # recon_loss, kl_loss, loss = vae_loss(amp_recon, target, z_mean, log_var, beta = beta)
-
         loss_metrics['loss'] += loss.cpu().detach().item()
-        # loss_metrics['kl_loss'] += kl_loss.cpu().detach().item()
-        # loss_metrics['recon_loss'] += recon_loss.cpu().detach().item()
-    
+
     for loss_name in loss_metrics.keys():
         loss_metrics[loss_name] = (loss_metrics[loss_name] / len(val_loader))
 
