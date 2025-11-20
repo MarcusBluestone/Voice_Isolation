@@ -1,4 +1,4 @@
-from data import DataLoader, DataTransformer, NoiseGenerator
+from data import DataLoader, DataTransformer
 from autoencoder import autoencoder_loss
 from tqdm import tqdm
 import torch
@@ -7,8 +7,7 @@ def evaluate(model: torch.nn.Module,
              val_loader: DataLoader, 
              data_transformer: DataTransformer, 
              device, 
-             noise_generator: NoiseGenerator, 
-             sigma_noise: float):
+             noise_fxn: callable):
     
     loss_metrics = {
         'loss': 0, 
@@ -23,7 +22,7 @@ def evaluate(model: torch.nn.Module,
         target = amp_clean.to(device).unsqueeze(1)
 
         # 2. Add Noise
-        noisy_waveform = noise_generator.add_gaussian(waveform, sigma = sigma_noise)
+        noisy_waveform = noise_fxn(waveform)
         amp_noisy, _, _ = data_transformer.waveform_to_spectrogram(noisy_waveform)
         
         # 3. Prepare Input to Model

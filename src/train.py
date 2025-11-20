@@ -24,9 +24,10 @@ def train(params: dict, out_dir: Path):
     num_epochs = params['num_epochs']
     dataset_size = params['dataset_size']
     batch_size = params['batch_size']
-    sigma_noise = params['sigma_noise']
     model_criteria = params['model_criteria']
     noise_type = params['noise_type']
+    gauss_scale = params['gauss_scale']
+    env_scale = params['env_scale']
 
     # Setup Dataset
     train_dataset = CleanDataset(chunk_size = 30_000, count = dataset_size, split = 'train-clean-100')
@@ -76,12 +77,13 @@ def train(params: dict, out_dir: Path):
 
             # 2. Add Noise
             if noise_type == "G":
-                noisy_waveform = noise_generator.add_gaussian(waveform, sigma = sigma_noise)
+                noise_function = lambda x : noise_generator.add_gaussian(x, sigma = gauss_scale)  # noqa: E731
             elif noise_type == "E":
-                noisy_waveform = noise_generator.add_environment(waveform, scale = 10)
+                noise_function = lambda x : noise_generator.add_environment(x, scale = env_scale) # noqa: E731
             else:
                 raise ValueError(f"Unknown noise type specified: {noise_type}")
             
+            noisy_waveform = noise_function(waveform)
             amp_noisy, _, _ = data_transformer.waveform_to_spectrogram(noisy_waveform)
             
             # 3. Prepare Input to Model
@@ -101,7 +103,8 @@ def train(params: dict, out_dir: Path):
 
         for loss_name in loss_dict.keys():
             per_epoch_loss[loss_name].append(loss_dict[loss_name] / len(train_loader))
-        per_epoch_loss['val_loss'].append(evaluate(model, val_loader, data_transformer, device, noise_generator, sigma_noise))
+        per_epoch_loss['val_loss'].append(evaluate(model, val_loader, data_transformer, device, noise_generator, 
+                                                   noise_fxn = noise_function))
 
         plot_learning_curve(per_epoch_loss, Path(out_dir /'lc.png'))
         pd.DataFrame(per_epoch_loss).to_csv(out_dir / 'epoch_metrics.csv')
