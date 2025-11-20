@@ -32,7 +32,7 @@ def train(params: dict, out_dir: Path):
 
     # Setup Dataset
     train_dataset = CleanDataset(chunk_size = 30_000, count = dataset_size, split = 'train-clean-100')
-    val_dataset = CleanDataset(chunk_size = 30_000, count = 10, split='dev-clean')
+    val_dataset = CleanDataset(chunk_size = 30_000, count = None, split='dev-clean')
 
     train_loader = DataLoader(train_dataset, batch_size = batch_size,shuffle = False)
     val_loader = DataLoader(val_dataset, batch_size = batch_size, shuffle = False)
