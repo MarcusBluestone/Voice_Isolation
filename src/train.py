@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import json
+import os
 
 import torch
 from torch.utils.data import DataLoader
@@ -18,7 +19,7 @@ from autoencoder import UNet, autoencoder_loss
 
 
 def train(params: dict, out_dir: Path):
-    out_dir.mkdir(exist_ok=True)
+    os.makedirs(out_dir, exist_ok=True)
 
     # Read Params
     num_epochs = params['num_epochs']
