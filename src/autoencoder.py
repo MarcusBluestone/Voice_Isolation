@@ -13,16 +13,16 @@ class ConvBlock(nn.Module):
         x = self.act(self.conv2(x))
         return x
 
-
-class UNet(nn.Module):
-    def __init__(self, input_channels=1, base_filters=16, final_activation='tanh'):
-        """
-        final_activation: 'tanh', 'sigmoid', or None
+class Encoder(nn.Module):
+    def __init__(self, input_channels=1, base_filters=16):
+        r"""
+        Encoder module that maps input spectrograms to a latent representation.
+        input_channels: Number of input channels (e.g., 1 for grayscale spectrograms)
+        base_filters: Number of filters in the first convolutional layer
         """
         super().__init__()
         f = base_filters
 
-        # Encoder
         self.conv1 = ConvBlock(input_channels, f)
         self.pool1 = nn.MaxPool2d(2)
 
@@ -38,6 +38,34 @@ class UNet(nn.Module):
         # Bottleneck
         self.conv5 = ConvBlock(f * 8, f * 16)
         self.dropout5 = nn.Dropout(0.5)
+    
+    def forward(self, x):
+        c1 = self.conv1(x)       # size: 256
+        p1 = self.pool1(c1)      # 128
+
+        c2 = self.conv2(p1)      # 128
+        p2 = self.pool2(c2)      # 64
+
+        c3 = self.conv3(p2)      # 64
+        p3 = self.pool3(c3)      # 32
+
+        c4 = self.conv4(p3)      # 32
+        p4 = self.pool4(c4)      # 16
+
+        # Bottleneck
+        c5 = self.conv5(p4)      # 16
+        d5 = self.dropout5(c5)
+
+        return d5, (c1, c2, c3, c4)
+    
+class Decoder(nn.Module):
+    def __init__(self, base_filters=16):
+        r"""
+        Decoder module that reconstructs spectrograms from latent representations.
+        base_filters: Number of filters in the first convolutional layer
+        """
+        super().__init__()
+        f = base_filters
 
         # Decoder (use ConvTranspose2d for upsampling)
         self.up6 = nn.ConvTranspose2d(f * 16, f * 8, kernel_size=2, stride=2)
@@ -55,33 +83,10 @@ class UNet(nn.Module):
         # Final output
         self.out_conv = nn.Conv2d(f, 1, kernel_size=1)
 
-        if final_activation == 'tanh':
-            self.final_activation = nn.Tanh()
-        elif final_activation == 'sigmoid':
-            self.final_activation = nn.Sigmoid()
-        else:
-            self.final_activation = None
+    def forward(self, x, enc_features):
+        c1, c2, c3, c4 = enc_features
 
-    def forward(self, x):
-        # Encoder
-        c1 = self.conv1(x)       # size: 256
-        p1 = self.pool1(c1)      # 128
-
-        c2 = self.conv2(p1)      # 128
-        p2 = self.pool2(c2)      # 64
-
-        c3 = self.conv3(p2)      # 64
-        p3 = self.pool3(c3)      # 32
-
-        c4 = self.conv4(p3)      # 32
-        p4 = self.pool4(c4)      # 16
-
-        # Bottleneck
-        c5 = self.conv5(p4)      # 16
-        d5 = self.dropout5(c5)
-
-        # Decoder (transpose conv upsamples by 2)
-        u6 = self.up6(d5)                # 32
+        u6 = self.up6(x)                # 32
         m6 = torch.cat([c4, u6], dim=1)  # concat channels
         c6 = self.conv6(m6)
 
@@ -98,6 +103,30 @@ class UNet(nn.Module):
         c9 = self.conv9(m9)
 
         out = self.out_conv(c9)
+        return out
+
+class UNet(nn.Module):
+    def __init__(self, input_channels=1, base_filters=16, final_activation='tanh'):
+        """
+        final_activation: 'tanh', 'sigmoid', or None
+        """
+        super().__init__()
+        self.encoder = Encoder(input_channels, base_filters)
+        self.decoder = Decoder(base_filters)
+
+        if final_activation == 'tanh':
+            self.final_activation = nn.Tanh()
+        elif final_activation == 'sigmoid':
+            self.final_activation = nn.Sigmoid()
+        else:
+            self.final_activation = None
+
+    def forward(self, x):
+        # Encoder
+        bottleneck, enc_features = self.encoder(x)
+        # Decoder
+        out = self.decoder(bottleneck, enc_features)
+
         if self.final_activation is not None:
             out = self.final_activation(out)
         return out
