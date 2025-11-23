@@ -1,89 +1,217 @@
 from tqdm import tqdm
 from pathlib import Path
+import pandas as pd
+import numpy as np
+import json
+import os
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch import optim
 import torch.nn.functional as F
-import numpy as np
 
 from data import CleanDataset
 from data_contrastive import AugmentedDataset
 from data import NoiseGenerator, DataTransformer
 from display_utils import plot_learning_curve
+from evaluate import evaluate
 
-from vae import AttnParams, CustomVAE
+# from vae import AttnParams, CustomVAE, vae_loss
+from autoencoder import UNet, autoencoder_loss
 
-from train import vae_loss, train
+from train import train
 
-num_epochs = 200
-dataset_size = 1
-beta = 0
-batch_size = 16
-sigma_noise = 0.01
+def info_nce_loss(embeddings1, embeddings2, tau: float = .07):
+    """
+    Computes the InfoNCE loss between two sets of embeddings.
+    embeddings1: Tensor of shape (batch_size, latent_dim)
+    embeddings2: Tensor of shape (batch_size, latent_dim)
+    tau: temperature parameter
+    """
+    batch_size = embeddings1.shape[0]
+    # Normalize embeddings
+    embeddings1 = F.normalize(embeddings1, dim=1).flatten(start_dim=1)
+    embeddings2 = F.normalize(embeddings2, dim=1).flatten(start_dim=1)
 
-output_folder = Path('../outputs')
-output_folder.mkdir(exist_ok=True)
+    z = torch.cat([embeddings1, embeddings2], dim=0)  # (2N, D)
+    # Compute similarity matrix
+    logits = (z @ z.T) / tau  # shape: (batch_size, batch_size)
+    # mask self-similarity
+    mask = torch.eye(logits.size(0), dtype=torch.bool).to(logits.device)
+    logits = logits.masked_fill(mask, float('-inf'))
 
-def train_contrastive(autoencoder_model, latent_dim, Dataset, batch_size, epochs, device, tau: float = .07): 
+    # Create labels
+    labels = torch.arange(2*batch_size).to(z.device)
+    labels = (labels + batch_size) % (2*batch_size) # positive pairs are the other augmentation N away
+
+    # Compute cross-entropy loss
+    criteria = nn.CrossEntropyLoss()
+    loss = criteria(logits, labels)
+
+    return loss
+
+# def train_contrastive(autoencoder_model, latent_dim, Dataset, batch_size, epochs, device, tau: float = .07): 
+def train_contrastive(params: dict, out_dir: Path, tau: float = .07, lam: float = 1.0, include_reconstruction: bool = True, validate: bool = True):
     """
     Trains an encoder using contrastive learning of where clean voice signals are mapped close to
     those on which noise has been added, and far from other signals in the batch. Then trains the complete
     encoder-decoder model to reconstruct the clean signal from the latent representation.
     """ 
-    
+    os.makedirs(out_dir, exist_ok=True)
+
+    # Read Params
+    num_epochs = params['num_epochs']
+    dataset_size = params['dataset_size']
+    batch_size = params['batch_size']
+    model_criteria = params['model_criteria']
+    noise_type = params['noise_type']
+    gauss_scale = params['gauss_scale']
+    env_scale = params['env_scale']
     # Setup Dataset
-    dataset = AugmentedDataset(chunk_size = 30_000, count = dataset_size)
-    train_loader = DataLoader(dataset, batch_size = batch_size, shuffle = False)
+    clean_dataset = CleanDataset(chunk_size = 30_000, count = dataset_size)
+    val_dataset = CleanDataset(chunk_size = 30_000, count = None, split='dev-clean')
+    train_loader = DataLoader(clean_dataset, batch_size = batch_size, shuffle = False)
+    val_loader = DataLoader(val_dataset, batch_size = batch_size, shuffle = False)
 
     # Setup Transformer & Augmenter
     data_transformer = DataTransformer()
     noise_generator = NoiseGenerator()
 
     # Setup Model & Optimizer
-    attn_params = AttnParams(num_heads=4, window_size=None, use_rel_pos_bias=False, dim_head=64)
-    model = CustomVAE(in_channels=1, spatial_dims=2, use_attn=False, vae_latent_channels=16,
-                      attn_params=attn_params, vae_use_log_var = True, beta = beta, dropout_prob=0, blocks_down=(1,),
-                      blocks_up = [])
-    encoder = model.encode
-    decoder = model.decode
+    model = UNet(input_channels=1, base_filters=16, final_activation='tanh')
+    encoder = model.encoder
+    if torch.backends.mps.is_available():  # Apple Silicon GPU
+        device = 'mps'
+    elif torch.cuda.is_available():        # Nvidia GPU
+        device = 'cuda'
+    else:
+        device = 'cpu'
+    model = model.to(device)
+    encoder = encoder.to(device)
+    optim = torch.optim.Adam(list(model.parameters()), lr=1e-3) # 2e-4
 
-    optim1 = torch.optim.Adam(list(model.parameters()), lr=2e-4)
-    # optim2 = torch.optim.Adam(list(enc.parameters()) + list(dec.parameters()), lr=2e-4)
+    if noise_type == "G":
+        noise_function = lambda x : noise_generator.add_gaussian(x, sigma = gauss_scale)  # noqa: E731
+    elif noise_type == "E":
+        noise_function = lambda x : noise_generator.add_environment(x, scale = env_scale) # noqa: E731
+    else:
+        raise ValueError(f"Unknown noise type specified: {noise_type}")
+    
+    # Metrics
+    per_epoch_loss = {
+        'total_loss': [],
+        'contrastive_loss': [],
+        'reconstruction_loss': [],
+        'val_loss': []
+    }
 
-    dataset = Dataset()
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+    # Perform the Training
+    model.train()
+    for epoch in range(1, num_epochs+1):
+        loss_dict = { 
+            'total_loss': 0,
+            'contrastive_loss': 0,
+            'reconstruction_loss': 0,
+        }
+        for waveform , _ in tqdm(train_loader, desc=f"Epoch {epoch}/{num_epochs}"):
+            # 1. Get Clean Chunk
+            amp_clean, _, _ = data_transformer.waveform_to_spectrogram(waveform)
+            _, W,H = amp_clean.shape
 
-    for epoch in range(epochs):
-        for batch1, batch2 in tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}"):
-            # For each i, pair
-            #   Positive pairs are (batch1[i], batch2[i])
-            #   Negative pairs are (batch1[i], batch2[j]), j != i.
-            amp1, _, _ = data_transformer.waveform_to_spectrogram(batch1)
-            amp2, _, _ = data_transformer.waveform_to_spectrogram(batch2)
-            input1 = data_transformer.add_padding(amp1).unsqueeze(0).to(device)
-            input2 = data_transformer.add_padding(amp2).unsqueeze(0).to(device)
-            # Contrastive training step
-            optim1.zero_grad()
-            # Run encoder on both inputs and get contrastive loss
-            z_mean1, z_sigma1, eps1, logvar1 = encoder(input1)
-            z_mean2, z_sigma2, eps2, logvar2 = encoder(input2)
+            # 2. Add Noise
+            # noise_function = lambda x : noise_generator.add_gaussian(x, sigma = gauss_scale)  # noqa: E731
+            noisy_waveform = noise_function(waveform)
+            amp_noisy, _, _ = data_transformer.waveform_to_spectrogram(noisy_waveform)
 
-            logits = (z_mean1 @ z_mean2.T)/tau
-            criteria = nn.CrossEntropyLoss()
-            loss1 = criteria(logits, torch.arange(logits.shape[0]).to(device))
-            loss1.backward()
-            optim1.step()
+            # 3. Prepare Input to Model
+            input_clean = data_transformer.add_padding(amp_clean).unsqueeze(1).to(device)
+            input_noisy = data_transformer.add_padding(amp_noisy).unsqueeze(1).to(device)
 
-            # # Reconstruction training step
-            # optim2.zero_grad()
-            # enc_out_clean = enc(clean_batch)
-            # dec_out = dec(enc_out_clean)
-            # loss2 = F.mse_loss(dec_out, clean_batch)
-            # loss2.backward()
-            # optim2.step()
+            # 4. Run model & get loss
+            enc_clean, _ = encoder(input_clean)
+            enc_noisy, _ = encoder(input_noisy)
 
-        print(f'[Contrastive] epoch {epoch: 4d}   Contrastive loss = {loss1.item():.4g}')
+            contrastive_loss = info_nce_loss(enc_clean, enc_noisy, tau=tau)
+            loss_dict['contrastive_loss'] += contrastive_loss.cpu().detach()
+            loss = contrastive_loss
 
-    # return enc, dec 
+            if include_reconstruction:
+                target = amp_clean.to(device).unsqueeze(1)
+                output = model(input_noisy)
+                reconstruction_loss = 100 * autoencoder_loss(output[:, :, :W, :H], target)
+                loss_dict['reconstruction_loss'] += reconstruction_loss.cpu().detach()
+                loss += lam * reconstruction_loss
+            loss_dict['total_loss'] += loss.cpu().detach()
+
+
+            optim.zero_grad()
+            loss.backward()
+            optim.step()
+
+        print(f'[Contrastive] epoch {epoch: 4d}   Contrastive loss = {loss_dict["contrastive_loss"]:.4g}   Reconstruction loss = {loss_dict["reconstruction_loss"]:.4g}   Total loss = {loss_dict["total_loss"]:.4g}')
+
+        per_epoch_loss["total_loss"].append(loss_dict["total_loss"] / len(train_loader))
+        if validate:
+            per_epoch_loss['val_loss'].append(evaluate(model, val_loader, data_transformer, device,
+                                                    noise_fxn = noise_function))
+            print(f'    Validation loss = {per_epoch_loss["val_loss"][-1]:.4g}')
+
+    save_path = out_dir / 'contrastive_model_testrun.pth'
+    torch.save(model.state_dict(), save_path)
+    print(per_epoch_loss)
+    plot_learning_curve(per_epoch_loss, Path(out_dir /'contrastive_lc.png'))
+
+    # If we didn't include reconstruction during contrastive training,
+    # train both the encoder and decoder here for reconstruction
+    # train the decoder separately for reconstruction
+    if not include_reconstruction:
+        print("\n[Reconstruction] Training decoder for reconstruction...")
+        model.train()
+        optim = torch.optim.Adam(model.parameters(), lr=1e-3)
+        
+        for epoch in range(1, num_epochs+1):
+            reconstruction_loss_total = 0
+            for waveform, _ in tqdm(train_loader, desc=f"Reconstruction Epoch {epoch}/{num_epochs}"):
+                # 1. Get Clean Chunk
+                amp_clean, _, _ = data_transformer.waveform_to_spectrogram(waveform)
+                _, W, H = amp_clean.shape
+                
+                # 2. Add Noise
+                noise_function = lambda x: noise_generator.add_gaussian(x, sigma=gauss_scale)  # noqa: E731
+                noisy_waveform = noise_function(waveform)
+                amp_noisy, _, _ = data_transformer.waveform_to_spectrogram(noisy_waveform)
+                
+                # 3. Prepare Input
+                input_noisy = data_transformer.add_padding(amp_noisy).unsqueeze(1).to(device)
+                target = amp_clean.to(device).unsqueeze(1)
+                
+                # Decode and compute reconstruction loss
+                output = model.decoder(input_noisy)
+                reconstruction_loss = autoencoder_loss(output[:, :, :W, :H], target)
+                
+                optim.zero_grad()
+                reconstruction_loss.backward()
+                optim.step()
+                
+                reconstruction_loss_total += reconstruction_loss.cpu().detach()
+            
+            print(f'[Reconstruction] epoch {epoch: 4d}   Reconstruction loss = {reconstruction_loss_total / len(train_loader):.4g}')
+        
+        # Save the trained model
+        # torch.save(model.state_dict(), out_dir / 'contrastive_model.pth')
+        # print(f"\nModel saved to {out_dir / 'contrastive_model.pth'}")
+        
+
+if __name__ == "__main__":
+    params = {
+        'num_epochs': 0,
+        'dataset_size': 1,
+        'batch_size': 16,
+        'model_criteria': 'mse',
+        'noise_type': 'G',
+        'gauss_scale': 0.1,
+        'env_scale': 1,
+    }
+    out_dir = Path('../outputs/contrastive/testrun3')
+    train_contrastive(params, out_dir, tau=0.07, validate=False)
