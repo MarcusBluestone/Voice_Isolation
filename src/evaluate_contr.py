@@ -1,6 +1,7 @@
 from data import DataLoader, DataTransformer
 from tqdm import tqdm
 import torch
+import torch.nn.functional as F
 
 def info_nce_loss(embeddings1, embeddings2, tau: float = .07):
     """
@@ -58,7 +59,7 @@ def evaluate_contrastive(model: torch.nn.Module,
     }
 
     model.eval()
-    encoder = model.encoder.to(device)
+    encoder = model.encoder_contrastive.to(device)
     
     with torch.no_grad():
         for waveform, _ in tqdm(val_loader, "Evaluating Contrastive"):
