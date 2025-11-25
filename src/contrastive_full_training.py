@@ -157,7 +157,7 @@ def train_contrastive(params: dict,
 
         print(f'[Contrastive] epoch {epoch: 4d}   Contrastive loss = {loss_dict["contrastive_loss"]:.4g}   Reconstruction loss = {loss_dict["reconstruction_loss"]:.4g}   Total loss = {loss_dict["train_loss"]:.4g}')
 
-        per_epoch_loss["train_loss"].append(loss_dict["train_loss"] / len(train_loader))
+        per_epoch_loss["train_loss"].append((loss_dict["train_loss"] / len(train_loader)).item())
         if validate:
             per_epoch_loss['val_loss'].append(evaluate_contrastive(model, val_loader, data_transformer, device,
                                                     noise_fxn = noise_function))
@@ -213,7 +213,7 @@ def train_contrastive(params: dict,
             print(f'[Reconstruction] epoch {epoch: 4d}   Reconstruction loss = {reconstruction_loss_total / len(train_loader):.4g}')
             per_epoch_loss2['train_reconstruction_loss'].append(reconstruction_loss_total / len(train_loader))
             if validate:
-                val_recon_loss = evaluate(model, val_loader, data_transformer, device, noise_generator, 
+                val_recon_loss = evaluate(model, val_loader, data_transformer, device,
                                          noise_fxn = noise_function)
                 per_epoch_loss2['val_reconstruction_loss'].append(val_recon_loss)
                 print(f'    Validation reconstruction loss = {val_recon_loss:.4g}')
