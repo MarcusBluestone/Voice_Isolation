@@ -59,6 +59,17 @@ def train_contrastive(params: dict, out_dir: Path, tau: float = .07, lam: float 
     encoder-decoder model to reconstruct the clean signal from the latent representation.
     """ 
     os.makedirs(out_dir, exist_ok=True)
+    # Save all parameters including function arguments
+    all_params = params.copy()
+    all_params.update({
+        'tau': tau,
+        'lam': lam,
+        'include_reconstruction': include_reconstruction,
+        'validate': validate
+    })
+    
+    with open(out_dir / 'params.json', 'w') as f:
+        json.dump(all_params, f, indent=2)
 
     # Read Params
     num_epochs = params['num_epochs']
@@ -149,18 +160,20 @@ def train_contrastive(params: dict, out_dir: Path, tau: float = .07, lam: float 
             loss.backward()
             optim.step()
 
-        print(f'[Contrastive] epoch {epoch: 4d}   Contrastive loss = {loss_dict["contrastive_loss"]:.4g}   Reconstruction loss = {loss_dict["reconstruction_loss"]:.4g}   Total loss = {loss_dict["total_loss"]:.4g}')
-
+        # print(f'[Contrastive] epoch {epoch: 4d}   Contrastive loss = {loss_dict["contrastive_loss"]:.4g}   Reconstruction loss = {loss_dict["reconstruction_loss"]:.4g}   Total loss = {loss_dict["total_loss"]:.4g}')
+        print(f'[Contrastive] epoch {epoch: 4d} Total loss = {loss_dict["total_loss"] / len(train_loader):.4g}')
         per_epoch_loss["total_loss"].append(loss_dict["total_loss"] / len(train_loader))
         if validate:
             per_epoch_loss['val_loss'].append(evaluate(model, val_loader, data_transformer, device,
                                                     noise_fxn = noise_function))
             print(f'    Validation loss = {per_epoch_loss["val_loss"][-1]:.4g}')
+        
+        plot_learning_curve(per_epoch_loss, Path(out_dir /'contrastive_lc.png'))
+        if epoch % 5 == 0:
+            save_path = out_dir / 'contrastive_model_testrun.pth'
+            torch.save(model.state_dict(), save_path)
 
-    save_path = out_dir / 'contrastive_model_testrun.pth'
-    torch.save(model.state_dict(), save_path)
     print(per_epoch_loss)
-    plot_learning_curve(per_epoch_loss, Path(out_dir /'contrastive_lc.png'))
 
     # If we didn't include reconstruction during contrastive training,
     # train both the encoder and decoder here for reconstruction
@@ -205,13 +218,13 @@ def train_contrastive(params: dict, out_dir: Path, tau: float = .07, lam: float 
 
 if __name__ == "__main__":
     params = {
-        'num_epochs': 0,
-        'dataset_size': 1,
+        'num_epochs': 30,
+        'dataset_size': 1000,
         'batch_size': 16,
         'model_criteria': 'mse',
         'noise_type': 'G',
         'gauss_scale': 0.1,
         'env_scale': 1,
     }
-    out_dir = Path('../outputs/contrastive/testrun3')
+    out_dir = Path('../outputs/contrastive/testrun5')
     train_contrastive(params, out_dir, tau=0.07, validate=False)
