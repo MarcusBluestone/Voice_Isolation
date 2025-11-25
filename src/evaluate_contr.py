@@ -2,6 +2,7 @@ from data import DataLoader, DataTransformer
 from tqdm import tqdm
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 
 def info_nce_loss(embeddings1, embeddings2, tau: float = .07):
     """
