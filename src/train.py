@@ -132,4 +132,4 @@ if __name__ == '__main__':
     param_runs = parse_params(param_dir)
 
     for i, params in enumerate(param_runs):
-        train(params, out_dir = Path(f'../outputs/run{i}'))
+        train(params, out_dir = Path(f'../outputs/G{i}'))
