@@ -16,6 +16,7 @@ from data_contrastive import AugmentedDataset
 from data import NoiseGenerator, DataTransformer
 from display_utils import plot_learning_curve
 from evaluate import evaluate
+from evaluate_contr import evaluate_contrastive
 
 # from vae import AttnParams, CustomVAE, vae_loss
 from autoencoder import UNet, autoencoder_loss, UNet_double
@@ -107,9 +108,7 @@ def train_contrastive(params: dict,
     
     # Metrics
     per_epoch_loss = {
-        'total_loss': [],
-        'contrastive_loss': [],
-        'reconstruction_loss': [],
+        'train_loss': [],
         'val_loss': []
     }
 
@@ -117,7 +116,7 @@ def train_contrastive(params: dict,
     model.train()
     for epoch in range(1, num_epochs+1):
         loss_dict = { 
-            'total_loss': 0,
+            'train_loss': 0,
             'contrastive_loss': 0,
             'reconstruction_loss': 0,
         }
@@ -149,22 +148,25 @@ def train_contrastive(params: dict,
                 reconstruction_loss = 100 * autoencoder_loss(output[:, :, :W, :H], target)
                 loss_dict['reconstruction_loss'] += reconstruction_loss.cpu().detach()
                 loss += lam * reconstruction_loss
-            loss_dict['total_loss'] += loss.cpu().detach()
+            loss_dict['train_loss'] += loss.cpu().detach()
 
 
             optim.zero_grad()
             loss.backward()
             optim.step()
 
-        print(f'[Contrastive] epoch {epoch: 4d}   Contrastive loss = {loss_dict["contrastive_loss"]:.4g}   Reconstruction loss = {loss_dict["reconstruction_loss"]:.4g}   Total loss = {loss_dict["total_loss"]:.4g}')
+        print(f'[Contrastive] epoch {epoch: 4d}   Contrastive loss = {loss_dict["contrastive_loss"]:.4g}   Reconstruction loss = {loss_dict["reconstruction_loss"]:.4g}   Total loss = {loss_dict["train_loss"]:.4g}')
 
-        per_epoch_loss["total_loss"].append(loss_dict["total_loss"] / len(train_loader))
+        per_epoch_loss["train_loss"].append(loss_dict["train_loss"] / len(train_loader))
         if validate:
-            per_epoch_loss['val_loss'].append(evaluate(model, val_loader, data_transformer, device,
+            per_epoch_loss['val_loss'].append(evaluate_contrastive(model, val_loader, data_transformer, device,
                                                     noise_fxn = noise_function))
             print(f'    Validation loss = {per_epoch_loss["val_loss"][-1]:.4g}')
+        
+        plot_learning_curve(per_epoch_loss, Path(out_dir /'contrastive_real_lc.png'))
+        pd.DataFrame(per_epoch_loss).to_csv(out_dir / 'contrastive_epoch_metrics.csv')
 
-    save_path = out_dir / 'contrastive_model_testrun.pth'
+    save_path = out_dir / 'contrastive_model_no_decoder.pth'
     torch.save(model.state_dict(), save_path)
     print(per_epoch_loss)
     plot_learning_curve(per_epoch_loss, Path(out_dir /'contrastive_lc.png'))
@@ -172,6 +174,10 @@ def train_contrastive(params: dict,
     # If we didn't include reconstruction during contrastive training,
     # train both the encoder and decoder here for reconstruction
     # train the decoder separately for reconstruction
+    per_epoch_loss2 = {
+        'train_reconstruction_loss': [],
+        'val_reconstruction_loss': []
+    }
     if train_reconstruction and not include_reconstruction:
         print("\n[Reconstruction] Training decoder for reconstruction...")
         model.train()
@@ -205,7 +211,17 @@ def train_contrastive(params: dict,
                 reconstruction_loss_total += reconstruction_loss.cpu().detach()
             
             print(f'[Reconstruction] epoch {epoch: 4d}   Reconstruction loss = {reconstruction_loss_total / len(train_loader):.4g}')
-        save_path = out_dir / 'contrastive_model_with_decoder_testrun.pth'
+            per_epoch_loss2['train_reconstruction_loss'].append(reconstruction_loss_total / len(train_loader))
+            if validate:
+                val_recon_loss = evaluate(model, val_loader, data_transformer, device, noise_generator, 
+                                         noise_fxn = noise_function)
+                per_epoch_loss2['val_reconstruction_loss'].append(val_recon_loss)
+                print(f'    Validation reconstruction loss = {val_recon_loss:.4g}')
+            
+            plot_learning_curve(per_epoch_loss2, Path(out_dir /'reconstruction_post_contrastive_real_lc.png'))
+            pd.DataFrame(per_epoch_loss2).to_csv(out_dir / 'reconstruction_post_contrastive_epoch_metrics.csv')
+
+        save_path = out_dir / 'contrastive_model_with_decoder.pth'
         torch.save(model.state_dict(), save_path)
         print(f"\nModel with decoder saved to {save_path}")
         # Save the trained model
@@ -215,14 +231,14 @@ def train_contrastive(params: dict,
 
 if __name__ == "__main__":
     params = {
-        'num_epochs_contrastive': 1,
-        'num_epochs_reconstruction': 1,
-        'dataset_size': 1,
-        'batch_size': 16,
+        'num_epochs_contrastive': 30,
+        'num_epochs_reconstruction': 30,
+        'dataset_size': None,
+        'batch_size': 128,
         'model_criteria': 'mse',
         'noise_type': 'G',
         'gauss_scale': 0.1,
         'env_scale': 1,
     }
-    out_dir = Path('../outputs/contrastive/testrun3')
-    train_contrastive(params, out_dir, tau=0.07, validate=False)
+    out_dir = Path('../outputs/contrastive/G1')
+    train_contrastive(params, out_dir, tau=0.07, validate=True)
