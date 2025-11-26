@@ -85,8 +85,8 @@ def train_contrastive(params: dict,
     # Setup Dataset
     clean_dataset = CleanDataset(chunk_size = 30_000, count = dataset_size)
     val_dataset = CleanDataset(chunk_size = 30_000, count = validation_size, split='dev-clean')
-    train_loader = DataLoader(clean_dataset, batch_size = batch_size, shuffle = False)
-    val_loader = DataLoader(val_dataset, batch_size = batch_size, shuffle = False)
+    train_loader = DataLoader(clean_dataset, batch_size = batch_size, shuffle = False,drop_last=True)
+    val_loader = DataLoader(val_dataset, batch_size = batch_size, shuffle = False, drop_last=True)
 
     # Setup Transformer & Augmenter
     data_transformer = DataTransformer()
@@ -241,9 +241,9 @@ if __name__ == "__main__":
     params = {
         'num_epochs_contrastive': 50,
         'num_epochs_reconstruction': 0,
-        'dataset_size': 10,
-        'validation_size': 10,
-        'batch_size': 128,
+        'dataset_size': 3,
+        'validation_size': 3,
+        'batch_size': 3,
         'model_criteria': 'mse',
         'noise_type': 'G',
         'gauss_scale': 0.1,
