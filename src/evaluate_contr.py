@@ -99,4 +99,4 @@ def evaluate_contrastive(model: torch.nn.Module,
     avg_contrastive_loss = (loss_metrics['contrastive_loss'] / len(val_loader))
     model.train()
 
-    return avg_contrastive_loss, model.encoder_contrastive.parameters()
+    return avg_contrastive_loss

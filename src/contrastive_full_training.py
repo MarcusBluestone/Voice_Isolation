@@ -85,7 +85,7 @@ def train_contrastive(params: dict,
     # Setup Dataset
     clean_dataset = CleanDataset(chunk_size = 30_000, count = dataset_size)
     val_dataset = CleanDataset(chunk_size = 30_000, count = validation_size, split='dev-clean')
-    train_loader = DataLoader(clean_dataset, batch_size = batch_size, shuffle = True)
+    train_loader = DataLoader(clean_dataset, batch_size = batch_size, shuffle = False)
     val_loader = DataLoader(val_dataset, batch_size = batch_size, shuffle = False)
 
     # Setup Transformer & Augmenter
@@ -164,11 +164,8 @@ def train_contrastive(params: dict,
 
         per_epoch_loss["train_loss"].append((loss_dict["train_loss"] / len(train_loader)).item())
         if validate:
-            val_loss, params = evaluate_contrastive(model, val_loader, data_transformer, device,
+            val_loss = evaluate_contrastive(model, val_loader, data_transformer, device,
                                                     noise_fxn = noise_function)
-            for i, param in enumerate(params):
-                if i >= 1: break
-                print(f"{i}: requires_grad={param.requires_grad}, {param[0][0][0]}")
 
             per_epoch_loss['val_loss'].append(val_loss)
             print(f'    Validation loss = {per_epoch_loss["val_loss"][-1]:.4g}')
