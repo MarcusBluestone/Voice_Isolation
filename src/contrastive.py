@@ -16,43 +16,16 @@ from data_contrastive import AugmentedDataset
 from data import NoiseGenerator, DataTransformer
 from display_utils import plot_learning_curve
 from evaluate import evaluate
+from evaluate_contr import evaluate_contrastive
 
 # from vae import AttnParams, CustomVAE, vae_loss
 from autoencoder import UNet, autoencoder_loss
 
 from train import train
-
-def info_nce_loss(embeddings1, embeddings2, tau: float = .07):
-    """
-    Computes the InfoNCE loss between two sets of embeddings.
-    embeddings1: Tensor of shape (batch_size, latent_dim)
-    embeddings2: Tensor of shape (batch_size, latent_dim)
-    tau: temperature parameter
-    """
-    batch_size = embeddings1.shape[0]
-    # Normalize embeddings
-    embeddings1 = F.normalize(embeddings1, dim=1).flatten(start_dim=1)
-    embeddings2 = F.normalize(embeddings2, dim=1).flatten(start_dim=1)
-
-    z = torch.cat([embeddings1, embeddings2], dim=0)  # (2N, D)
-    # Compute similarity matrix
-    logits = (z @ z.T) / tau  # shape: (batch_size, batch_size)
-    # mask self-similarity
-    mask = torch.eye(logits.size(0), dtype=torch.bool).to(logits.device)
-    logits = logits.masked_fill(mask, float('-inf'))
-
-    # Create labels
-    labels = torch.arange(2*batch_size).to(z.device)
-    labels = (labels + batch_size) % (2*batch_size) # positive pairs are the other augmentation N away
-
-    # Compute cross-entropy loss
-    criteria = nn.CrossEntropyLoss()
-    loss = criteria(logits, labels)
-
-    return loss
+from info_nce_loss import info_nce_loss
 
 # def train_contrastive(autoencoder_model, latent_dim, Dataset, batch_size, epochs, device, tau: float = .07): 
-def train_contrastive(params: dict, out_dir: Path, tau: float = .07, lam: float = 1.0, include_reconstruction: bool = True, validate: bool = True):
+def train_contrastive(params: dict, out_dir: Path, tau: float = .07, lam: float = 1.0, include_reconstruction: bool = False, validate: bool = True):
     """
     Trains an encoder using contrastive learning of where clean voice signals are mapped close to
     those on which noise has been added, and far from other signals in the batch. Then trains the complete
@@ -164,14 +137,13 @@ def train_contrastive(params: dict, out_dir: Path, tau: float = .07, lam: float 
         print(f'[Contrastive] epoch {epoch: 4d} Total loss = {loss_dict["total_loss"] / len(train_loader):.4g}')
         per_epoch_loss["total_loss"].append(loss_dict["total_loss"] / len(train_loader))
         if validate:
-            per_epoch_loss['val_loss'].append(evaluate(model, val_loader, data_transformer, device,
+            per_epoch_loss['val_loss'].append(evaluate_contrastive(model, val_loader, data_transformer, device,
                                                     noise_fxn = noise_function))
             print(f'    Validation loss = {per_epoch_loss["val_loss"][-1]:.4g}')
         
         plot_learning_curve(per_epoch_loss, Path(out_dir /'contrastive_lc.png'))
-        if epoch % 5 == 0:
-            save_path = out_dir / 'contrastive_model_testrun.pth'
-            torch.save(model.state_dict(), save_path)
+        save_path = out_dir / 'contrastive_model_testrun.pth'
+        torch.save(model.state_dict(), save_path)
 
     print(per_epoch_loss)
 
@@ -219,12 +191,12 @@ def train_contrastive(params: dict, out_dir: Path, tau: float = .07, lam: float 
 if __name__ == "__main__":
     params = {
         'num_epochs': 30,
-        'dataset_size': 1000,
+        'dataset_size': 500,
         'batch_size': 16,
         'model_criteria': 'mse',
         'noise_type': 'G',
         'gauss_scale': 0.1,
         'env_scale': 1,
     }
-    out_dir = Path('../outputs/contrastive/testrun5')
+    out_dir = Path('../outputs/contrastive/testrun6')
     train_contrastive(params, out_dir, tau=0.07, validate=False)
