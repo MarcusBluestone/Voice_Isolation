@@ -59,8 +59,9 @@ def evaluate_contrastive(model: torch.nn.Module,
         'contrastive_loss': 0, 
     }
 
-    model.eval()
-    encoder = model.encoder_contrastive.to(device)
+    model.eval()  # evaluation mode
+    
+    encoder = model.encoder_contrastive
     
     with torch.no_grad():
         for waveform, _ in tqdm(val_loader, "Evaluating Contrastive"):
@@ -68,9 +69,11 @@ def evaluate_contrastive(model: torch.nn.Module,
             amp_clean, _, _ = data_transformer.waveform_to_spectrogram(waveform)
             
             # 2. Add Noise
+            # noisy_waveform = waveform
             noisy_waveform = noise_fxn(waveform)
             amp_noisy, _, _ = data_transformer.waveform_to_spectrogram(noisy_waveform)
             
+
             # 3. Prepare Input to Model
             input_clean = data_transformer.add_padding(amp_clean).unsqueeze(1).to(device)
             input_noisy = data_transformer.add_padding(amp_noisy).unsqueeze(1).to(device)
@@ -80,12 +83,10 @@ def evaluate_contrastive(model: torch.nn.Module,
             enc_noisy, _ = encoder(input_noisy)
 
             contrastive_loss = info_nce_loss(enc_clean, enc_noisy, tau=tau)
-
             loss_metrics['contrastive_loss'] += contrastive_loss.cpu().detach().item()
 
     # Calculate average loss
-    avg_contrastive_loss = loss_metrics['contrastive_loss'] / len(val_loader)
-
+    avg_contrastive_loss = (loss_metrics['contrastive_loss'] / len(val_loader))
     model.train()
 
-    return avg_contrastive_loss
+    return avg_contrastive_loss, model.encoder_contrastive.parameters()

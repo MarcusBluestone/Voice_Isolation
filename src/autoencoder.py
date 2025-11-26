@@ -37,7 +37,7 @@ class Encoder(nn.Module):
 
         # Bottleneck
         self.conv5 = ConvBlock(f * 8, f * 16)
-        self.dropout5 = nn.Dropout(0.5)
+        # self.dropout5 = nn.Dropout(0.5)
     
     def forward(self, x):
         c1 = self.conv1(x)       # size: 256
@@ -54,7 +54,8 @@ class Encoder(nn.Module):
 
         # Bottleneck
         c5 = self.conv5(p4)      # 16
-        d5 = self.dropout5(c5)
+        # d5 = self.dropout5(c5)
+        d5 = c5
 
         return d5, (c1, c2, c3, c4)
     

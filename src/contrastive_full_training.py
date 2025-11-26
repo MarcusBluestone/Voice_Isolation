@@ -1,27 +1,21 @@
 from tqdm import tqdm
 from pathlib import Path
 import pandas as pd
-import numpy as np
-import json
 import os
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from torch import optim
 import torch.nn.functional as F
 
 from data import CleanDataset
-from data_contrastive import AugmentedDataset
 from data import NoiseGenerator, DataTransformer
 from display_utils import plot_learning_curve
 from evaluate import evaluate
 from evaluate_contr import evaluate_contrastive
 
 # from vae import AttnParams, CustomVAE, vae_loss
-from autoencoder import UNet, autoencoder_loss, UNet_double
-
-from train import train
+from autoencoder import autoencoder_loss, UNet_double
 
 def info_nce_loss(embeddings1, embeddings2, tau: float = .07):
     """
@@ -72,14 +66,15 @@ def train_contrastive(params: dict,
     num_epochs_reconstruction = params['num_epochs_reconstruction']
     dataset_size = params['dataset_size']
     batch_size = params['batch_size']
-    model_criteria = params['model_criteria']
     noise_type = params['noise_type']
     gauss_scale = params['gauss_scale']
     env_scale = params['env_scale']
+    validation_size = params['validation_size']
+
     # Setup Dataset
     clean_dataset = CleanDataset(chunk_size = 30_000, count = dataset_size)
-    val_dataset = CleanDataset(chunk_size = 30_000, count = None, split='dev-clean')
-    train_loader = DataLoader(clean_dataset, batch_size = batch_size, shuffle = False)
+    val_dataset = CleanDataset(chunk_size = 30_000, count = validation_size, split='dev-clean')
+    train_loader = DataLoader(clean_dataset, batch_size = batch_size, shuffle = True)
     val_loader = DataLoader(val_dataset, batch_size = batch_size, shuffle = False)
 
     # Setup Transformer & Augmenter
@@ -116,9 +111,9 @@ def train_contrastive(params: dict,
     model.train()
     for epoch in range(1, num_epochs+1):
         loss_dict = { 
-            'train_loss': 0,
-            'contrastive_loss': 0,
-            'reconstruction_loss': 0,
+            'train_loss': 0.0,
+            'contrastive_loss': 0.0,
+            'reconstruction_loss': 0.0,
         }
         for waveform , _ in tqdm(train_loader, desc=f"Epoch {epoch}/{num_epochs}"):
             # 1. Get Clean Chunk
@@ -126,7 +121,7 @@ def train_contrastive(params: dict,
             _, W,H = amp_clean.shape
 
             # 2. Add Noise
-            # noise_function = lambda x : noise_generator.add_gaussian(x, sigma = gauss_scale)  # noqa: E731
+            # noisy_waveform = waveform
             noisy_waveform = noise_function(waveform)
             amp_noisy, _, _ = data_transformer.waveform_to_spectrogram(noisy_waveform)
 
@@ -150,7 +145,6 @@ def train_contrastive(params: dict,
                 loss += lam * reconstruction_loss
             loss_dict['train_loss'] += loss.cpu().detach()
 
-
             optim.zero_grad()
             loss.backward()
             optim.step()
@@ -159,8 +153,13 @@ def train_contrastive(params: dict,
 
         per_epoch_loss["train_loss"].append((loss_dict["train_loss"] / len(train_loader)).item())
         if validate:
-            per_epoch_loss['val_loss'].append(evaluate_contrastive(model, val_loader, data_transformer, device,
-                                                    noise_fxn = noise_function))
+            val_loss, params = evaluate_contrastive(model, val_loader, data_transformer, device,
+                                                    noise_fxn = noise_function)
+            for i, param in enumerate(params):
+                if i >= 1: break
+                print(f"{i}: requires_grad={param.requires_grad}, {param[0][0][0]}")
+
+            per_epoch_loss['val_loss'].append(val_loss)
             print(f'    Validation loss = {per_epoch_loss["val_loss"][-1]:.4g}')
         
         plot_learning_curve(per_epoch_loss, Path(out_dir /'contrastive_real_lc.png'))
@@ -171,6 +170,7 @@ def train_contrastive(params: dict,
     print(per_epoch_loss)
     plot_learning_curve(per_epoch_loss, Path(out_dir /'contrastive_lc.png'))
 
+    # ------------- RECONSTRUCTION -----------------
     # If we didn't include reconstruction during contrastive training,
     # train both the encoder and decoder here for reconstruction
     # train the decoder separately for reconstruction
@@ -232,8 +232,9 @@ def train_contrastive(params: dict,
 if __name__ == "__main__":
     params = {
         'num_epochs_contrastive': 30,
-        'num_epochs_reconstruction': 30,
+        'num_epochs_reconstruction': 0,
         'dataset_size': None,
+        'validation_size': None,
         'batch_size': 128,
         'model_criteria': 'mse',
         'noise_type': 'G',
