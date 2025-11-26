@@ -4,3 +4,4 @@ voice_data/*
 *copy
 *.pth
 *.png
+src/marcus_test.ipynb
