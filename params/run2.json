@@ -1,9 +1,0 @@
-{
-  "num_epochs": 25,
-  "dataset_size": null,
-  "batch_size": 128,
-  "noise_type": "G", 
-  "gauss_scale": 0.01,
-  "env_scale": 5,
-  "model_criteria": "val_loss"
-}

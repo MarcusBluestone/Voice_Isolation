@@ -264,16 +264,16 @@ class DataTransformer:
             # --- Amplitude ---
             im0 = axes[0].imshow(amp[idx].cpu().numpy(), cmap='magma', vmin = -1, vmax = 1, origin='lower')
             axes[0].set_title('Amplitude')
-            # axes[0].set_xlabel('Time Frames')
-            # axes[0].set_ylabel('Frequency Bins')
+            axes[0].set_xlabel('Time Frames')
+            axes[0].set_ylabel('Frequency Bins')
             # axes[0].yaxis('off')
             fig.colorbar(im0, ax=axes[0])
 
             # --- Phase ---
             im1 = axes[1].imshow(phase[idx].cpu().numpy(), cmap='magma', vmin =-1, vmax = 1, origin='lower')
             axes[1].set_title('Phase')
-            # axes[1].set_xlabel('Time Frames')
-            # axes[0].set_ylabel('Frequency Bins')
+            axes[1].set_xlabel('Time Frames')
+            axes[0].set_ylabel('Frequency Bins')
             # axes[1].axis('off')
             fig.colorbar(im1, ax=axes[1])
 
@@ -350,6 +350,16 @@ class DataTransformer:
         pad = (0, pad_H, 0, pad_W)
 
         return F.pad(x, pad)
+    
+    def save_waveform_img(self, waveform: torch.Tensor, fpath: Path):
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.scatter(range(len(waveform))[::3], waveform[::3], s=1)
+        ax.set_title("Waveform")
+        ax.set_xlabel("Sample index")
+        ax.set_ylabel("Amplitude")
+        fig.tight_layout()
+        fig.savefig(fpath)
+        plt.close(fig)
     
 if __name__ == '__main__':
     # Commment out which one u want 

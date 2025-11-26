@@ -24,15 +24,17 @@ def train(params: dict, out_dir: Path):
     # Read Params
     num_epochs = params['num_epochs']
     dataset_size = params['dataset_size']
+    validation_size = params['validation_size']
     batch_size = params['batch_size']
     model_criteria = params['model_criteria']
     noise_type = params['noise_type']
     gauss_scale = params['gauss_scale']
     env_scale = params['env_scale']
 
+
     # Setup Dataset
     train_dataset = CleanDataset(chunk_size = 30_000, count = dataset_size, split = 'train-clean-100')
-    val_dataset = CleanDataset(chunk_size = 30_000, count = None, split='dev-clean')
+    val_dataset = CleanDataset(chunk_size = 30_000, count = validation_size, split='dev-clean')
 
     train_loader = DataLoader(train_dataset, batch_size = batch_size,shuffle = False)
     val_loader = DataLoader(val_dataset, batch_size = batch_size, shuffle = False)
@@ -104,7 +106,7 @@ def train(params: dict, out_dir: Path):
 
         for loss_name in loss_dict.keys():
             per_epoch_loss[loss_name].append(loss_dict[loss_name] / len(train_loader))
-        per_epoch_loss['val_loss'].append(evaluate(model, val_loader, data_transformer, device, noise_generator, 
+        per_epoch_loss['val_loss'].append(evaluate(model, val_loader, data_transformer, device, 
                                                    noise_fxn = noise_function))
 
         plot_learning_curve(per_epoch_loss, Path(out_dir /'lc.png'))
