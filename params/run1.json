@@ -6,5 +6,6 @@
   "noise_type": "G", 
   "gauss_scale": 0.01,
   "env_scale": 5,
-  "model_criteria": "val_loss"
+  "model_criteria": "val_loss",
+  "env_type": "OMEETING"
 }

@@ -67,6 +67,7 @@ def get_chunk(waveform: torch.Tensor, chunk_size: int):
     
     If its shorter than chunk size, then pad it and return it
     """
+    # idx = 0
     if len(waveform) < chunk_size:
         return torch.nn.functional.pad(waveform, pad = (0, chunk_size - len(waveform)))
 
@@ -82,7 +83,7 @@ class NoiseGenerator:
 
     def __init__(self):
         # Download all the enviornment noise options? 
-        # cached file_path: /Users/user/.cache/kagglehub/datasets/aanhari/demand-dataset/versions/1
+        # cached file_path: /Users/marcusbluestone/.cache/kagglehub/datasets/aanhari/demand-dataset/versions/1
         self.kaggle_path = Path(kagglehub.dataset_download("aanhari/demand-dataset")) / 'demand'  / 'demand'
         self.categories = [d.name for d in self.kaggle_path.iterdir() if d.is_dir()]
         print("Noise Categories", self.categories)
@@ -90,14 +91,16 @@ class NoiseGenerator:
     def add_gaussian(self, waveform: torch.Tensor, sigma: float = .01):
         return waveform + torch.rand_like(waveform) * sigma
 
-    def add_environment(self, waveform_inp: torch.Tensor, category_num: int = -1, scale: float = 1):
+    def add_environment(self, waveform_inp: torch.Tensor, category: str | None = None, scale: float = 1):
         """
         Chooses a random category if category_num is -1
         """
-        if category_num == -1:
+        if category is None:
             category_num = np.random.randint(0, len(self.categories))
-        
-        category_path = self.kaggle_path / self.categories[category_num]
+            category_path = self.kaggle_path / self.categories[category_num]
+        else:
+            category_path = self.kaggle_path / category
+
         wav_path = np.random.choice(list(category_path.iterdir()))
 
         waveform_noise, sample_rate = torchaudio.load(wav_path)

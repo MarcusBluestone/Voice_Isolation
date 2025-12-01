@@ -30,6 +30,7 @@ def train(params: dict, out_dir: Path):
     noise_type = params['noise_type']
     gauss_scale = params['gauss_scale']
     env_scale = params['env_scale']
+    env_noise_type = params['env_type']
 
 
     # Setup Dataset
@@ -82,7 +83,7 @@ def train(params: dict, out_dir: Path):
             if noise_type == "G":
                 noise_function = lambda x : noise_generator.add_gaussian(x, sigma = gauss_scale)  # noqa: E731
             elif noise_type == "E":
-                noise_function = lambda x : noise_generator.add_environment(x, scale = env_scale) # noqa: E731
+                noise_function = lambda x : noise_generator.add_environment(x, scale = env_scale, category_num = env_noise_type) # noqa: E731
             else:
                 raise ValueError(f"Unknown noise type specified: {noise_type}")
             
