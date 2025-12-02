@@ -1,4 +1,3 @@
-from shutil import copy
 from tqdm import tqdm
 from pathlib import Path
 import pandas as pd
@@ -220,7 +219,7 @@ if __name__ == "__main__":
     run_gaussian = [.01, .1, .3, .5]
     names = ['G0-01', 'G0-1', 'G0-3', 'G0-5']
     for scale, name in zip(run_gaussian, names):
-        exp_params = copy.deepcopy(params)
+        exp_params = params.copy()
         exp_params['gauss_scale'] = scale
         out_dir = Path(f'../outputs/contrastive/{name}')
         model = train_contrastive(exp_params, out_dir, tau=0.07, validate=True)
