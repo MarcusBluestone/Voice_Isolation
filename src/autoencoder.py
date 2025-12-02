@@ -169,7 +169,7 @@ class UNet(nn.Module):
         else:
             self.final_activation = None
 
-    def forward(self, x):
+    def forward(self, x, noise=False):
         # Encoder
         bottleneck, enc_features = self.encoder(x)
         # Decoder
