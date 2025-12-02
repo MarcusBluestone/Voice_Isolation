@@ -1,3 +1,4 @@
+from shutil import copy
 from tqdm import tqdm
 from pathlib import Path
 import pandas as pd
@@ -13,6 +14,7 @@ from data import NoiseGenerator, DataTransformer
 from display_utils import plot_learning_curve
 from evaluate import evaluate
 from evaluate_contr import evaluate_contrastive
+from inspect_contrastive_model import inspect_bottleneck, ablation_test_bottleneck, inspect_decoder_weights
 
 # from vae import AttnParams, CustomVAE, vae_loss
 from autoencoder import autoencoder_loss, UNet_double
@@ -146,7 +148,8 @@ def train_contrastive(params: dict,
     # train the decoder separately for reconstruction
     per_epoch_loss2 = {
         'train_reconstruction_loss': [],
-        'val_reconstruction_loss': []
+        'val_reconstruction_loss': [],
+        'val_reconstruction_loss_noise': [],
     }
     if train_reconstruction and not include_reconstruction:
         print("\n[Reconstruction] Training decoder for reconstruction...")
@@ -185,31 +188,54 @@ def train_contrastive(params: dict,
             if validate:
                 val_recon_loss = evaluate(model, val_loader, data_transformer, device,
                                          noise_fxn = noise_function)
+                val_recon_loss_noise = evaluate(model, val_loader, data_transformer, device,
+                                         noise_fxn = noise_function, use_random_contrastive=True)
                 per_epoch_loss2['val_reconstruction_loss'].append(val_recon_loss)
+                per_epoch_loss2['val_reconstruction_loss_noise'].append(val_recon_loss_noise)
                 print(f'    Validation reconstruction loss = {val_recon_loss:.4g}')
-            
+                print(f'    Validation reconstruction loss (noise) = {val_recon_loss_noise:.4g}')
+
             plot_learning_curve(per_epoch_loss2, Path(out_dir /'reconstruction_post_contrastive_real_lc.png'))
             pd.DataFrame(per_epoch_loss2).to_csv(out_dir / 'reconstruction_post_contrastive_epoch_metrics.csv')
 
         save_path = out_dir / 'contrastive_model_with_decoder.pth'
         torch.save(model.state_dict(), save_path)
         print(f"\nModel with decoder saved to {save_path}")
-        # Save the trained model
-        # torch.save(model.state_dict(), out_dir / 'contrastive_model.pth')
-        # print(f"\nModel saved to {out_dir / 'contrastive_model.pth'}")
+        return model
+        
         
 
 if __name__ == "__main__":
     params = {
-        'num_epochs_contrastive': 50,
-        'num_epochs_reconstruction': 0,
-        'dataset_size': 3,
-        'validation_size': 3,
-        'batch_size': 3,
+        'num_epochs_contrastive': 20,
+        'num_epochs_reconstruction': 20,
+        'dataset_size': None,
+        'validation_size': None,
+        'batch_size': 128,
         'model_criteria': 'mse',
         'noise_type': 'G',
         'gauss_scale': 0.1,
         'env_scale': 1,
     }
-    out_dir = Path('../outputs/contrastive/G1')
-    train_contrastive(params, out_dir, tau=0.07, validate=True)
+    run_gaussian = [.01, .1, .3, .5]
+    names = ['G0-01', 'G0-1', 'G0-3', 'G0-5']
+    for scale, name in zip(run_gaussian, names):
+        exp_params = copy.deepcopy(params)
+        exp_params['gauss_scale'] = scale
+        out_dir = Path(f'../outputs/contrastive/{name}')
+        model = train_contrastive(exp_params, out_dir, tau=0.07, validate=True)
+
+        if torch.backends.mps.is_available():  # Apple Silicon GPU
+            device = 'mps'
+        elif torch.cuda.is_available():        # Nvidia GPU
+            device = 'cuda'
+        else:
+            device = 'cpu'
+        model = model.to(device)
+        clean_dataset = CleanDataset(chunk_size = 30_000, count = 50)
+        train_loader = DataLoader(clean_dataset, batch_size = 64, shuffle = False, drop_last=True)
+
+        file_out = out_dir / "contrastive_model_inspection.txt"
+        inspect_bottleneck(model, train_loader, file_out, device=device)
+        ablation_test_bottleneck(model, train_loader, DataTransformer(), file_out, device=device, num_batches=10)
+        inspect_decoder_weights(model, file_out)
