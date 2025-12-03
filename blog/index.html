@@ -229,12 +229,16 @@
 		<div class="content-margin-container" id="intro">
 				<div class="margin-left-block">
           <!-- table of contents here -->
-          <div style="position:fixed; max-width:inherit; top:max(20%,120px)">
-              <b style="font-size:16px">Outline</b><br><br>
-              <a href="#intro">Fix</a><br><br>
-              <a href="#does_x_do_y">Fix</a><br><br>
-              <a href="#implications_and_limitations">Implications and limitations</a><br><br>
-          </div>
+		<div style="position:fixed; max-width:inherit; top:max(20%,120px)">
+			<b style="font-size:16px">Outline</b><br><br>
+			<a href="#intro">Introduction</a><br><br>
+			<a href="#Background: Formalization of Voice Isolation">Background: Formalization of Voice Isolation</a><br><br>
+			<a href="#Background: What is Sound?">Background: What is Sound?</a><br><br>
+			<a href="#Methodology">Methodology: CLUNet</a><br><br>
+			<a href="#Experiments & Results">Experiments & Results</a><br><br>
+			<a href="#conclusion">Conclusion & Future Work</a><br><br>
+			<a href="#citations">References</a>
+		</div>
 				</div>
 		    <div class="main-content-block">
             <!--You can embed an image like this:-->
@@ -784,8 +788,55 @@
 					in the convolutional layer at the bottleneck.   <strong>WRITE VALUES AND ELABORATE; ALSO INCLUDE 
 						SAMPLE RECONSTRUCTIONS FROM OUR MODELS!!!!</strong>
 					Include example audio reconstructions. 
+					
+					<br><br><br>
+					We also include some example audio reconstructions:
 
-				</p>
+					</p>
+				<div style="display: flex; align-items: flex-start; gap: 1em; margin-top: 0.5em;">
+
+					<!-- Left column: audio clips -->
+					<div style="display: flex; flex-direction: column; gap: 0.6em;">
+
+						<div style="display: flex; align-items: center; gap: 1em;">
+							<audio controls style="width: 350px;">
+								<source src="files/original0.wav" type="audio/wav">
+							</audio>
+							<figcaption style="font-size: 0.9em; color: #555;">
+								Clean signal
+							</figcaption>
+						</div>
+
+						<div style="display: flex; align-items: center; gap: 1em;">
+							<audio controls style="width: 350px;">
+								<source src="files/noisy5.wav" type="audio/wav">
+							</audio>
+							<figcaption style="font-size: 0.9em; color: #555;">
+								Augmented w/ Gaussian Noise (\(\sigma = 5\)). WATCH YOUR EARS!!!
+							</figcaption>
+						</div>
+
+						<div style="display: flex; align-items: center; gap: 1em;">
+							<audio controls style="width: 350px;">
+								<source src="files/reconstr5.wav" type="audio/wav">
+							</audio>
+							<figcaption style="font-size: 0.9em; color: #555;">
+								Reconstructed w/ regular DAE architecture. 
+							</figcaption>
+						</div>
+
+						<div style="display: flex; align-items: center; gap: 1em;">
+							<audio controls style="width: 350px;">
+								<source src="files/reconstr5_cl.wav" type="audio/wav">
+							</audio>
+							<figcaption style="font-size: 0.9em; color: #555;">
+							Reconstructed w/ novel CLUNet architecture. 
+							</figcaption>
+						</div>
+
+
+					</div>
+				</div>
 
 		</div>
 	</div>
@@ -842,7 +893,7 @@
 			</div>
 		<div class="main-content-block">
 					<div class='citation' id="references" style="height:auto"><br>
-						<span style="font-size:16px">References:</span><br><br>
+						<h1> References:</h1><br><br>
 						<a id="ref_1"></a>[1]
 							K. Wang, B. He, and W.-P. Zhu, 
 							<i>TSTNN: Two-stage Transformer based Neural Network for Speech Enhancement in the Time Domain</i>, 
