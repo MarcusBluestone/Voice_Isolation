@@ -20,7 +20,7 @@ cd src
 python -m data
 ```
 
-Run with:
+To run the training, set any .json files in `params` folder. Then run:
 ```
 cd src
 python -m train
