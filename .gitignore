@@ -5,3 +5,4 @@ voice_data/*
 *.pth
 src/marcus_test.ipynb
 results/*
+DS_Store
