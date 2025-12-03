@@ -1,7 +1,7 @@
 {
-  "num_epochs": 40,
-  "dataset_size": 10,
-  "validation_size": 3,
+  "num_epochs": 20,
+  "dataset_size": null,
+  "validation_size": null,
   "batch_size": 128,
   "noise_type": "G", 
   "gauss_scale": 0.01,

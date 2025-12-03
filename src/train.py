@@ -135,4 +135,10 @@ if __name__ == '__main__':
     param_runs = parse_params(param_dir)
 
     for i, params in enumerate(param_runs):
-        train(params, out_dir = Path(f'../outputs/G{i}'))
+        run_gaussian = [.01, .1, .3, .5]
+        names = ['G0-01', 'G0-1', 'G0-3', 'G0-5']
+        for scale, name in zip(run_gaussian, names):
+            exp_params = params.copy()
+            exp_params['gauss_scale'] = scale
+            out_dir = Path(f'../outputs/regular/{name}')
+            train(exp_params, out_dir = out_dir)

@@ -169,7 +169,7 @@ class UNet(nn.Module):
         else:
             self.final_activation = None
 
-    def forward(self, x):
+    def forward(self, x, noise=False):
         # Encoder
         bottleneck, enc_features = self.encoder(x)
         # Decoder
@@ -196,10 +196,12 @@ class UNet_double(nn.Module):
         else:
             self.final_activation = None
 
-    def forward(self, x):
+    def forward(self, x, noise=False):
         # Encoder
         contrastive_latent, _ = self.encoder_contrastive(x)
         regular_latent, enc_features = self.encoder_regular(x)
+        if noise:
+            contrastive_latent = torch.randn_like(contrastive_latent).to(contrastive_latent.device)
         bottleneck = torch.cat([contrastive_latent, regular_latent], dim=1)
 
         # Decoder
