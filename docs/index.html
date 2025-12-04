@@ -1,0 +1,995 @@
+<html>
+<head>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<link rel="shortcut icon" href="images/icon.ico">
+<style type="text/css">
+	body {
+		background-color: #f5f9ff;
+	}
+
+	/* Hide both math displays initially, will display based on JS detection */
+  .mathjax-mobile, .mathml-non-mobile { display: none; }
+
+  /* Show the MathML content by default on non-mobile devices */
+  .show-mathml .mathml-non-mobile { display: block; }
+  .show-mathjax .mathjax-mobile { display: block; }
+
+	.content-margin-container {
+		display: flex;
+		width: 100%; /* Ensure the container is full width */
+		justify-content: left; /* Horizontally centers the children in the container */
+		align-items: center;  /* Vertically centers the children in the container */
+	}
+	.main-content-block {
+		width: 70%; /* Change this percentage as needed */
+    max-width: 1100px; /* Optional: Maximum width */
+		background-color: #fff;
+		border-left: 1px solid #DDD;
+		border-right: 1px solid #DDD;
+		padding: 8px 8px 8px 8px;
+		font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;#"Avenir";
+	}
+	.margin-left-block {
+			font-size: 14px;
+			width: 15%; /* Change this percentage as needed */
+			max-width: 130px; /* Optional: Maximum width */
+			position: relative;
+			margin-left: 10px;
+			text-align: left;
+			font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;#"Avenir";
+			padding: 5px;
+	}
+	.margin-right-block {
+			font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;#"Avenir";
+			font-size: 14px;
+			width: 25%; /* Change this percentage as needed */
+			max-width: 256px; /* Optional: Maximum width */
+			position: relative;
+			text-align: left;
+			padding: 10px;  /* Optional: Adds padding inside the caption */
+	}
+
+	img {
+			max-width: 100%; /* Make sure it fits inside the container */
+			height: auto;
+			display: block;
+			margin: auto;
+	}
+	.my-video {
+			max-width: 100%; /* Make sure it fits inside the container */
+			height: auto;
+			display: block;
+			margin: auto;
+	}
+	/* Hide both video displays initially, will display based on JS detection */
+  .vid-mobile, .vid-non-mobile { display: none; }
+
+  /* Show the video content by default on non-mobile devices */
+  .show-vid-mobile .vid-mobile { display: block; }
+  .show-vid-non-mobile .vid-non-mobile { display: block; }
+
+	a:link,a:visited
+	{
+		color: #0e7862; /*#1367a7;*/
+		text-decoration: none;
+	}
+	a:hover {
+		color: #24b597; /*#208799;*/
+	}
+
+	h1 {
+		font-size: 24px;
+		margin-top: 4px;
+		margin-bottom: 10px;
+	}
+
+	h2 {
+		font-size: 18px;
+		margin-top: 6px;
+		margin-bottom: 12px;
+	}
+
+	table.header {
+    font-weight: 300;
+    font-size: 17px;
+    flex-grow: 1;
+		width: 70%;
+    max-width: calc(100% - 290px); /* Adjust according to the width of .paper-code-tab */
+	}
+	table td, table td * {
+	    vertical-align: middle;
+	    position: relative;
+	}
+	table.paper-code-tab {
+	    flex-shrink: 0;
+	    margin-left: 8px;
+	    margin-top: 8px;
+	    padding: 0px 0px 0px 8px;
+	    width: 290px;
+	    height: 150px;
+	}
+
+	.layered-paper { /* modified from: http://css-tricks.com/snippets/css/layered-paper/ */
+		box-shadow:
+		        0px 0px 1px 1px rgba(0,0,0,0.35), /* The top layer shadow */
+		        5px 5px 0 0px #fff, /* The second layer */
+		        5px 5px 1px 1px rgba(0,0,0,0.35), /* The second layer shadow */
+		        10px 10px 0 0px #fff, /* The third layer */
+		        10px 10px 1px 1px rgba(0,0,0,0.35); /* The third layer shadow */
+		margin-top: 5px;
+		margin-left: 10px;
+		margin-right: 30px;
+		margin-bottom: 5px;
+	}
+
+	hr {
+    height: 1px; /* Sets the height of the line to 1 pixel */
+    border: none; /* Removes the default border */
+    background-color: #DDD; /* Sets the line color to black */
+  }
+
+	div.hypothesis {
+		width: 80%;
+		background-color: #EEE;
+		border: 1px solid black;
+		border-radius: 10px;
+		-moz-border-radius: 10px;
+		-webkit-border-radius: 10px;
+		font-family: Courier;
+		font-size: 18px;
+		text-align: center;
+		margin: auto;
+		padding: 16px 16px 16px 16px;
+	}
+
+	div.citation {
+    font-size: 0.8em;
+    background-color:#fff;
+    padding: 10px;
+		height: 200px;
+  }
+
+	.fade-in-inline {
+		position: absolute;
+		text-align: center;
+		margin: auto;
+		-webkit-mask-image: linear-gradient(to right,
+																			transparent 0%,
+																			transparent 40%,
+																			black 50%,
+																			black 90%,
+																			transparent 100%);
+		mask-image: linear-gradient(to right,
+																transparent 0%,
+																transparent 40%,
+																black 50%,
+																black 90%,
+																transparent 100%);
+		-webkit-mask-size: 8000% 100%;
+		mask-size: 8000% 100%;
+		animation-name: sweepMask;
+		animation-duration: 4s;
+		animation-iteration-count: infinite;
+		animation-timing-function: linear;
+		animation-delay: -1s;
+	}
+
+	.fade-in2-inline {
+			animation-delay: 1s;
+	}
+
+	.inline-div {
+			position: relative;
+	    display: inline-block; /* Makes both the div and paragraph inline-block elements */
+	    vertical-align: top; /* Aligns them at the top, you can adjust this to middle, bottom, etc., based on your needs */
+	    width: 50px; /* Optional: Adds space between the div and the paragraph */
+	}
+
+</style>
+
+	  <title>CLUNet: Using Contrastive Learning to Improve Traditional DAE Voice Isolation Methods </title>
+      <meta property="og:title" content="Utilizing Contrastive Learning to Improve Voice Isolation Methods" />
+			<meta charset="UTF-8">
+  </head>
+
+  <body>
+
+		<div class="content-margin-container">
+				<div class="margin-left-block">
+				</div>
+		    <div class="main-content-block">
+						<table class="header" align=left>
+								<tr>
+									<td colspan=4>
+										<span style="font-size: 32px; font-family: 'Courier New', Courier, monospace; /* Adds fallbacks */">CLUNet: Using Contrastive Learning to Improve Traditional DAE Voice Isolation Methods</span>
+									</td>
+								</tr>
+								<tr>
+										<td align=left>
+												<span style="font-size:17px"><a href="https://github.com/MarcusBluestone">Marcus Bluestone</a></span>
+										</td>
+										<td align=left>
+												<span style="font-size:17px"><a href="your_partner's_website">Zack Duitz</a></span>
+										</td>
+                                        <td align=left>
+												<span style="font-size:17px"><a href="https://github.com/bzgrey">Benjamin Grey</a></span>
+										</td>
+								<tr>
+									<td colspan=4 align=left><span style="font-size:18px">Final project for 6.7960, MIT</span></td>
+								</tr>
+						</table>
+					</div>
+					<!-- <div class="margin-right-block">
+					</div> -->
+		</div>
+
+		<div class="content-margin-container" id="intro">
+				<div class="margin-left-block">
+          <!-- table of contents here -->
+		<div style="position:fixed; max-width:inherit; top:max(20%,120px)">
+			<b style="font-size:16px">Outline</b><br><br>
+			<a href="#intro">Introduction</a><br><br>
+			<a href="#Background: Formalization of Voice Isolation">Background: Formalization of Voice Isolation</a><br><br>
+			<a href="#Background: What is Sound?">Background: What is Sound?</a><br><br>
+			<a href="#Methodology">Methodology: CLUNet</a><br><br>
+			<a href="#Experiments & Results">Experiments & Results</a><br><br>
+			<a href="#conclusion">Conclusion & Future Work</a><br><br>
+			<a href="#citations">References</a>
+		</div>
+				</div>
+		    <div class="main-content-block">
+            <!--You can embed an image like this:-->
+            <img src="./files/Methodology.png" width=512px/>
+		    </div>
+		    <!-- <div class="margin-right-block">
+						Overview of the our novel technique for voice isolation, which combines both contrastive learning
+						and traditional reconstruction loss, to get a clearner resulting audio signal.
+		    </div> -->
+		</div>
+
+    <div class="content-margin-container" id="intro">
+				<div class="margin-left-block">
+				</div>
+		    <div class="main-content-block">
+            <h1>Introduction: The Problem of Voice Isolation</h1>
+
+            <p>
+                As online interactions continue to expand across personal, professional, and social spaces, 
+				the need for reliable techniques to extract clean voice signals from noisy input streams has 
+				become increasingly popular. In the past few decades, Deep Learning-based approaches have gained 
+				particular traction, yielding ever more sophisticated and successful methods for isolating and 
+				enhancing human vocal signals in complex acoustic environments. 
+            </p>
+
+			<p>
+				More specifically, given an audio signal that has some background noise and/or disturbances, 
+				can we remove the noise without affecting the quality of the underlying signal? Our research 
+				proposes and tests a novel approach to this problem. For instance, here is a clean
+			</p>
+			
+		<figure style="margin: 1em 0;">
+			<audio controls>
+				<source src="files/original0.wav" type="audio/wav">
+				Your browser does not support the audio element.
+			</audio>
+				<audio controls>
+				<source src="files/noisy01.wav" type="audio/wav">
+				Your browser does not support the audio element.
+			</audio>
+			<audio controls>
+				<source src="files/noisy05.wav" type="audio/wav">
+				Your browser does not support the audio element.
+			</audio>
+			<figcaption style="font-size: 0.9em; color: #555;">
+				Example of Noisy Environment. From left \(\rightarrow\) right, we have the clean signal, Gaussian noise w/ \(\sigma\) = .01, and 
+				Gaussian noise w/ \(\sigma\) = .05
+			</figcaption>
+		</figure>
+            <p>
+                <strong> Thesis: </strong> We propose and test a new model architecture <strong>CLUNet</strong> 
+				that combines Contrastive Loss-based methods with 
+				Denoising Autoencoder-based methods to generate higher quality reconstructions.
+				We show that by combining the encodings learned via traditional denoising autoencoders 
+				and via contrastive loss, the training procedure is more stable and the reconstructed signals 
+				achieve a lower error than without it. 
+            </p>
+
+            <p>
+                Let’s unpack what this means.
+
+            </p>
+            </div>
+		    <!-- <div class="margin-right-block">
+						 Margin note that clarifies some detail #main-content-block for intro section. -->
+		    <!-- </div> --> 
+		</div>
+
+	<div class="content-margin-container" id="Background: Formalization of Voice Isolation">
+			<div class="margin-left-block">
+			</div>
+		<div class="main-content-block">
+				<h1>Background: Formalization of Voice Isolation</h1>
+				One can view the problem of cleaning a noisy audio signal as a specific instance 
+				of denoising, where the goal is to recover an underlying clean representation from a corrupted input. 
+
+				More formally, we sample some clean input \(x\) from our dataset of clean audio signals, augment with 
+				some randomized noise function \(g(x)\). We want to find a function \(f(x)\) that, on average, minimizes
+				the expected reconstruction loss \(\mathcal{L}\) between the original clean signal and the output of \(f\). 
+
+		<center>
+		\[
+		\displaystyle
+		\arg\min_{f(\cdot)} \; \mathbb{E}_{x \sim D_{\text{clean}}}[\mathcal{L}(x, f(g(x)))]
+		\]
+
+		</center>
+		</div>
+		<!-- <div class="margin-right-block" style="transform: translate(0%, -100%);">  you can move the margin notes up and down with translate -->
+		<!-- Interestingly, Plato also asked if X does Y, in <a href="#ref_1">[1]</a>. -->
+		<!-- </div>  -->
+	</div>
+
+	<div class="content-margin-container" id="Background: What is Sound?">
+			<div class="margin-left-block">
+			</div>
+		<div class="main-content-block">
+				<h1>Background: What is Sound?</h1>
+
+				<p> Humans and computers handle sound very differently. </p>
+
+				<br>
+
+				<h2> Physical Sound</h2>
+
+				<p>
+					What humans perceive as sound is simply a physical vibration through 
+					the air – the pushing and pulling of air molecules. See figure below. When we hear a sound, we 
+					do not actually hear the frequency or amplitude directly, but rather perceive certain 
+					qualities of the sound, such as loudness, pitch, and timbre. And yet, the task of voice 
+					isolation is generally quite easy for humans to perform. <a href="#ref_4">[4]</a>
+				</p>
+
+				<figure style="margin: 1em 0; text-align: center;">
+					<audio controls>
+						<source src="files/original0.wav" type="audio/wav">
+						Your browser does not support the audio element.
+					</audio>
+					<figcaption style="font-size: 0.9em; color: #555;">
+						Example of an audio clip. Press to listen.
+					</figcaption>
+				</figure>
+				
+				<h2> Digital Waveforms </h2>
+
+				<p>
+					Computers, on the other hand, require sound to be <u>discretized</u> in some fashion,
+					 and so the continuous pressure waveforms are converted into numbers by sampling 
+					 the air pressure at very small time intervals. The frequency at which we sample 
+					 is called the <strong>sample rate</strong>. 
+					 
+					 <br><br>
+					 The sampled data is called a <strong> digitized waveform </strong>. Historically, 
+					 waveforms were rarely used directly for voice-isolation or speech-processing 
+					 tasks. Their raw form is highly detailed, noisy, and difficult to interpret 
+					 using traditional signal-processing or statistical models. Only within the 
+					 past decade—enabled by advances in deep learning for time-series data—have 
+					 researchers begun to successfully perform voice isolation directly from waveform 
+					 inputs, using architectures capable of learning the necessary features automatically. 	
+					 <a href="#ref_1">[1]</a>,<a href="#ref_2">[2]</a>,<a href="#ref_3">[3]</a>	
+				</p>
+
+				<figure style="margin: 1em 0; text-align: center;">
+					<img src="files/waveform_pic.png" 
+						alt="Waveform visualization"
+						style="max-width: 50%; height: auto; margin-bottom: 0.5em;" />
+
+					<figcaption style="font-size: 0.9em; color: #555;">
+						Digitized version of the audio signal above. We use a sample rate of 16 kHz.
+					</figcaption>
+				</figure>
+
+				<h2> Spectrograms </h2>
+
+				<p>
+					Beginning in the late 20th century, it became standard practice to transform 
+					speech waveforms into the time–frequency domain prior to analysis  <a href="#ref_5">[5]</a>. This was typically 
+					done using the <strong>short-time Fourier Transform (STFT)</strong>, which produces a complex-valued 
+					spectrogram. The spectrogram may then be decomposed into its magnitude and phase components. 
+					In a spectrogram representation, the x-axis denotes time, the y-axis denotes frequency, and 
+					each point in the 2D plane encodes the magnitude or phase of the signal at that time–frequency 
+					location <a href="#ref_6">[6]</a>. Despite the emergence of end-to-end deep learning models, spectrogram-based 
+					representations remain widely used today due to their stability, interpretability, and 
+					computational efficiency (note that often the log-magnitude is used for 
+					more stabilized training) <a href="#ref_7">[7]</a>,<a href="#ref_8">[8]</a>. 
+				</p>
+				<figure style="margin: 1em 0; text-align: center;">
+					<img src="files/spectrogram_pic.png" 
+						alt="Spectrogram visualization"
+						style="max-width: 75%; height: auto; margin-bottom: 0.5em;" />
+
+					<figcaption style="font-size: 0.9em; color: #555;">
+						Amplitude & Phase Spectrograms of the audio sample above. See experimens sections for exact 
+						parameters used in the ST-FT. 
+					</figcaption>
+				</figure>
+				
+		</div>
+
+	</div>
+
+
+
+	<div class="content-margin-container">
+			<div class="margin-left-block">
+			</div>
+		<div class="main-content-block">
+		<h1>Past Work: A Variety of Architectures</h1>
+		<p>
+			Depending on how the data is encoded, a variety of state-of-the-art methods exist for voice isolation:
+		</p>
+		<!-- In this section we embed a video:
+					<video class='my-video' loop autoplay muted style="width: 725px">
+							<source src="./images/mtsh.mp4" type="video/mp4">
+					</video> -->
+
+		<ol>
+            <li><strong>Denoising Convolutional Autoencoders</strong>: In this framework, a clean sample is 
+				augmented with noise and then fed through a traditional autoencoder, with the original clean 
+				signal being used as the reconstruction target. When the audio signals are represented as 
+				spectrograms, standard Convolutional-Based Autoencoder architectures have proven to be 
+				highly effective at reconstruction.</li> <a href="#ref_3">[3]</a>,<a href="#ref_9">[9]</a>,<a href="#ref_10">[10]</a>,<a href="#ref_11">[11]</a>,<a href="#ref_12">[12]</a>. 
+				See below for an example architecture, called the CAUNet from Li et al, which is a traditional bottlenecked autoencoder with
+				an attention layer at the bottleneck <a href="#ref_12">[12]</a>. 
+				
+				<figure style="margin: 1em 0; text-align: center;">
+					<img src="files/CAUNet.png" 
+						alt="CAUNet"
+						style="max-width: 75%; height: auto; margin-bottom: 0.5em;" />
+
+					<figcaption style="font-size: 0.9em; color: #555;">
+						CAUNet architecture. Picture taken from Li et al <a href="#ref_12">[12]</a>. 
+					</figcaption>
+				</figure>
+
+            <li><strong> Time Series Models:</strong> Some approaches use a time-based architecture 
+				(such as Dual-Path RNNs <a href="#ref_13">[13]</a>, LSTMs <a href="#ref_14">[14]</a>, or Transformers <a href="#ref_1">[1]</a>) that act on the waveforms directly without
+				spectrogram intermediaries. They utilize utilize both local and 
+				global time information to predict the noise at each time step. 
+				These approaches have achieved high success rates, but suffer from higher 
+				computational overhead due to the large size of the input waveforms and more 
+				complex model architectures. 
+
+            <li><strong>Contrastive Learning for Speech Processing:</strong> 
+				Contrastive learning can enforce useful similarities and dissimilarities in 
+				embeddings to improve voice isolation performance under different realistic conditions. For example, 
+				Noise-Aware Speech Separation (NASS) uses a patch-wise contrastive learning (PCL) objective to 
+				explicitly minimize mutual information between noisy background representations and speaker 
+				embeddings <a href="#ref_15">[15]</a>. In a fully unsupervised setting, frame-level contrastive learning has also 
+				been used: Ochieng treats different frames from the same speaker as “augmentations” and 
+				pulls them together in representation space, then clusters them via deep modularization, 
+				which helps separate overlapping voices without needing permutation labels <a href="#ref_16">[16]</a>. 
+
+			<p>
+				Our novel method <strong>CLUNet</strong> seeks to combine the highly successful results from convolutional denoising architectures and 
+				contrastive learning-based approaches. We avoid working with time-series data directly to avoid large computational overheads
+				and, instead, propose new directions in the Future Works sections at the end. 
+			</p>
+		</div>
+
+	</div>
+
+		<div class="content-margin-container" id="Methodology">
+				<div class="margin-left-block">
+				</div>
+		    <div class="main-content-block">
+						<h1>Methodology: CLUNet</h1>
+						
+						<h2>CL vs. DAE</h2>
+
+						<p>
+							To motivate why combining Contrastive Learning (CL) and Denoising Autoencoders (DAE)
+							might produce better results, it’s important to understand the difference between the 
+							two approaches:
+
+							<br><br>
+							
+							<strong> Contrastive learning (CL) </strong>: an <u>unsupervised</u> method which trains 
+								an <u>encoder</u> to map different views of the same signal to nearby locations in 
+								latent space, while mapping views of different signals to locations that are 
+								far apart in latent space. In our application, the “different views” correspond 
+								to different, random noise augmentations applied to the same clean signal. Note 
+								that this method only trains an encoder and doesn’t worry about reconstructing 
+								the clean signal. 
+
+								<br><br>
+
+							<strong> Denoising Autoencoder (DAE)</strong>: is a <u>self-supervised</u> method which 
+							trains both an <u>encoder</u> and <u>decoder</u> to recreate the original clean signal 
+							from a noisy augmented form of the signal. 
+
+						</p>
+
+						<h2>The Idea Behind CLUNet</h2>
+
+						<p>
+
+							Despite seeming very different, there is a subtle connection 
+							between the two approaches. Both approaches require understanding 
+							the underlying clean structure of the noisy inputs. In order for an 
+							Encoder trained via Contrastive Learning to map noisy views of different 
+							clean signals to locations far apart in the latent space, it must be able 
+							to – in some way – uncover or understand the underlying clean signal structure. 
+							We hypothesize that this latent space information, therefore, should also be useful 
+							in the reconstruction task required by the DAE. 
+							
+							<br><br>
+							<figure style="margin: 1em 0; text-align: center;">
+								<img src="files/Methodology.png" 
+									alt="CLUNet"
+									style="max-width: 75%; height: auto; margin-bottom: 0.5em;" />
+
+								<figcaption style="font-size: 0.9em; color: #555;">
+									CLUNet architecture. We use two encoders -- one trained via CL and one paired with 
+									a decoder that is trained via traditional reconsutrction loss. 
+								</figcaption>
+							</figure>
+							However, because the Encoder used in 
+							Contrastive Learning does not require any reconstruction task, 
+							we train two separate encoders. The full pipeline involves each 
+							encoder mapping a noisy input to a latent space representation, 
+							concatenating the two latent space representations, and then feeding 
+							them into a decoder that reconstructs the original clean signal. See Figure. 
+						</p>
+
+						<h2>Training CLUNet</h2>
+
+						<p>
+							Training this pipeline is not a trivial task, and we propose other options 
+							in the Future Works section. In this paper, we first train \(Enc_{CL}\) solely
+							via contrastive loss. Afterwards, we freeze that encoder, and train the 
+							\(Enc_{REC}\)  -  \(Dec_{REC}\) pair using traditional MSE loss with the clean signal as target. 
+							
+							<br><br>
+							More specifically, we have two phases for our training:
+														<br><br>
+
+							<strong> Phase 1 - CL: </strong> Sample two clean signals from our dataset; 
+							randomly augment each of them \(n\) times; apply the ST-FT to get their amplitude 
+							spectrograms; pass them through the Enc_CL; then maximize the cosine-similarity 
+							between encodings from the same clean signal and minimize the cosine-similarity between 
+							encodings from the different signals. This is done using the equivalent formulation 
+							of the InfoNCE loss objective.
+
+							<figure style="margin: 1em 0; text-align: center;">
+								<img src="files/CL.png" 
+									alt="CLUNet"
+									style="max-width: 75%; height: auto; margin-bottom: 0.5em;" />
+
+								<figcaption style="font-size: 0.9em; color: #555;">
+									Training procedure for \(Enc_{CL}\), which is the encoder trained with Contrastive Loss. 
+								</figcaption>
+							</figure>
+
+							The InfoNCE loss takes the form below, where \(z_i\) is a noisy signal, \(z_i^+\) are other noisy
+							augmentations of the same underlying clean signal as \(z_i\), and  \(z_i^-\) are  noisy
+							augmentations of a DIFFERENT underlying clean signal than \(z_i\)
+
+							\[
+							\begin{equation}
+							\mathcal{L}_{\text{InfoNCE}} = - \frac{1}{N} \sum_{i=1}^{N} 
+							\log \frac{\exp\big(\text{sim}(z_i, z_i^+)/\tau\big)}
+							{\exp\big(\text{sim}(z_i, z_i^+)/\tau\big) + \sum_{j=1}^{M} \exp\big(\text{sim}(z_i, z_j^-)/\tau\big)}
+							\end{equation}
+
+							\]
+
+
+						<strong> Phase 2 - REC:</strong> Sample one clean signal from our dataset; randomly augment it; 
+						apply the ST-FT to obtain the amplitude spectrogram for both the clean & noisy signals; 
+						pass the noisy spectrogram through the Enc_REC and ENC_CL; concatenate their 
+						latent spaces and pass that through Dec_REC; minimize MSE between the original 
+						clean spectrogram and the reconstruction output of the decoder. 
+							<figure style="margin: 1em 0; text-align: center;">
+								<img src="files/REC2.png" 
+									alt="CLUNet"
+									style="max-width: 75%; height: auto; margin-bottom: 0.5em;" />
+
+								<figcaption style="font-size: 0.9em; color: #555;">
+									Training procedure for \(Enc_{REC}\) and \(Dec_{REC}\), where they are trained concurrently using 
+									MSE between the reconstruction and the clean signal as target. 
+								</figcaption>
+							</figure>
+						</p>
+						
+						Note that we are only training our model to predict the original amplitude and not 
+						the phase, as is standard practice in these settings, as the human ear isn’t able to 
+						really hear the difference between clean & noisy phase, and phase spectrograms tend to 
+						look a lot noisier and are thus harder for the model to predict anyways.  When creating 
+						the original waveform for auditory inspection, we simply use the noisy phase spectrogram <a href="#ref_11">[11]</a>. 
+
+
+		    </div>
+		</div>
+
+	<div class="content-margin-container" id="Experiments & Results">
+			<div class="margin-left-block">
+			</div>
+		<div class="main-content-block">
+				<h1>Experiments & Results</h1>
+
+				<h2> Dataset </h2>
+
+				<p>
+
+					For our dataset of clean signals, we used PyTorch’s Librispeech library <a href="#ref_17">[17]</a>. 
+					For training, we used the “train-clean-100” partition (~7 GB), which contains around 
+					100 hours of clean speech from 4 different speakers. For the validation/test test, we 
+					used the “clean-dev” partition (~.7 GB), which contains 5 hours of clean speech. We 
+					randomly split the data into ~3-second intervals. The data was saved as waveforms with 
+					sample_rate = 16 kHz
+					
+					<br><br>
+
+					To convert the waveforms into spectrograms, we used the ST-FT using a 
+					Hann window with size 510, and hop_length = 256 <a href="#ref_6">[6]</a>. These parameters were chosen 
+					such that we would get perfect reconstruction when applying the inverse ST-FT to an 
+					uncorrupted, clean spectrogram to recover the original waveform; while still producing 
+					spectrograms that are reasonably sized (256 x 198). We padded the spectrograms to size 
+					(256, 256) before feeding them into the network. 
+				</p>
+
+				<h2> Noise Augmentations </h2>
+
+				<ol>
+					<li><strong>Gaussian Noise:</strong> We add Gaussian noise centered at 0, with standard deviation ranging from 0.01 to 0.5.</li>
+					<li><strong>Environmental Noise:</strong> We used a Kaggle dataset that contains long clips of environmental noise, such as a “river”, “hallway”, or “office meeting”. We scaled the amplitude of these clips, ranging from values 10 to 100.</li>
+				</ol>
+
+				<figure style="margin: 1em 0; text-align: center;">
+					<img src="files/stft_apply.png" 
+						alt="CLUNet"
+						style="max-width: 75%; height: auto; margin-bottom: 0.5em;" />
+
+					<figcaption style="font-size: 0.9em; color: #555;">
+						Examples application of the ST-FT to a clean & noisy (with Gaussian noise, \(\sigma\)=.1) waveforms.  
+					</figcaption>
+				</figure>
+
+				Here's what adding the noise sounds like:
+
+				<figure style="margin: 1em 0;">
+					<audio controls>
+						<source src="files/original0.wav" type="audio/wav">
+						Your browser does not support the audio element.
+					</audio>
+						<audio controls>
+						<source src="files/noise1.wav" type="audio/wav">
+						Your browser does not support the audio element.
+					</audio>
+					<audio controls>
+						<source src="files/noisy1.wav" type="audio/wav">
+						Your browser does not support the audio element.
+					</audio>
+					<figcaption style="font-size: 0.9em; color: #555;">
+						Example of Noisy Environment. Left is clean signal; middle is the noise (Gaussian w/ \(\sigma\) = .1); 
+						and right is the addition of the noise to the clean signal. 
+					</figcaption>
+				</figure>
+				
+				<figure style="margin: 1em 0;">
+					<audio controls>
+						<source src="files/original0.wav" type="audio/wav">
+						Your browser does not support the audio element.
+					</audio>
+						<audio controls>
+						<source src="files/noise_E.wav" type="audio/wav">
+						Your browser does not support the audio element.
+					</audio>
+					<audio controls>
+						<source src="files/noisy_E.wav" type="audio/wav">
+						Your browser does not support the audio element.
+					</audio>
+					<figcaption style="font-size: 0.9em; color: #555;">
+						Example of Noisy Environment. Left is clean signal; middle is the noise (Environment w/ type=MEETING; scale = 40); 
+						and right is the addition of the noise to the clean signal. 
+					</figcaption>
+				</figure>
+
+
+				<h2> Training & Experimental Parameters </h2>
+				We use the simple convolutional U-Net model described in  <a href="#ref_6">[6]</a> 
+				(without the transformer layer at the bottleneck). <br><br>
+
+				We train our model using PyTorch; learning rate = 1e-4; optimizer = Adam; epochs = 20; 
+				batch_size = 128.
+
+				We run experiments comparing a traditional DAE architecture, as compared to our novel architecture
+				that combines both reconstruction loss and contrastive loss. We run the experiment for a variety of 
+				noise augmentation types (Gaussian w/ \(\sigma = .01, .1, .3, .5\) and Enviornment w/ scale = 10,50,70,100
+				and type = "MEETING"). For each experiment, we tracked both the train loss and validation loss per epoch.
+				
+				Total runtime for all of the experiments was approximately 15 hours. 
+				
+				<h2> Results </h2>
+
+
+				We first show the results for training just the contrastive learning encoder. See Figure below. 
+				the intensity of the noise.  
+				<figure style="margin: 1em 0; text-align: center;">
+					<img src="files/ContrastiveLoss.png" 
+						alt="CLUNet"
+						style="max-width: 100%; height: auto; margin-bottom: 0.5em;" />
+
+					<figcaption style="font-size: 0.9em; color: #555;">
+						Learning curves from the Contrastive Loss module. The first row is enviornmental noise, and
+						the second row is Gaussian noise. From left to right, we are increasing the strength of the noise.
+						Plots show train/val loss vs. epoch number. 
+					</figcaption>
+				</figure>
+
+
+				There are a few noteworthy results:
+				<ol>
+					<li> The encoder is clearly learning, and is also converging to a stable value 
+						at the end of training</li>
+					<li> As we increase the amplitude of the noise (both for the environment and gaussian settings), 
+						the model does worse. This makes intuitive sense, as it becomes harder to uncover the 
+						original signal. </li>
+					<li> Learning in the Gaussian setting proved to be quite stable and near-instantaneous 
+						(with the final value being often near 0); while learning in the 
+						environmental setting was noisier w/ fluctuations that eventually converged to a stable value. </li>
+				</ol>
+				
+				Next, we show a comparison of traditional denoising architectures vs our novel approach.
+				<figure style="margin: 1em 0; text-align: center;">
+					<img src="files/Gaussian.png" 
+						alt="CLUNet"
+						style="max-width: 100%; height: auto; margin-bottom: 0.5em;" />
+
+					<figcaption style="font-size: 0.9em; color: #555;">
+						Comparison of learning curves for reconsutrcting clean signals after applying Gaussian noise,
+						with and without the contrastive loss module. Plots show train/val loss vs. epoch number. 
+
+
+						The first row "Regular" doesn't use the second encoder, while the second row does. 
+						From left to right, we are increasing the strength of the noise.
+					</figcaption>
+				</figure>
+
+				<figure style="margin: 1em 0; text-align: center;">
+					<img src="files/Environment.png" 
+						alt="CLUNet"
+						style="max-width: 100%; height: auto; margin-bottom: 0.5em;" />
+
+					<figcaption style="font-size: 0.9em; color: #555;">
+						Comparison of learning curves for reconsutrcting clean signals after applying Environmental noise,
+						with and without the contrastive loss module. Plots show train/val loss vs. epoch number. 
+
+
+						The first row "Regular" doesn't use the second encoder, while the second row does. 
+						From left to right, we are increasing the strength of the noise.
+					</figcaption>
+				</figure>
+
+
+				<p>
+
+					Our results demonstrate more consistent training with a lower final loss, 
+					compared to traditional denoising architectures. This validates our hypothesis that 
+					including the latent space information from the contrastive loss-based encoder improves 
+					the accuracy of the model when performing reconstruction. Moreover, the training procedure 
+					is much more stable when we first train w/ the contrastive loss. 
+
+
+					To further validate our results, we inspect the mean of the absolute values of the weights 
+					in the convolutional layer at the bottleneck.   <strong>WRITE VALUES AND ELABORATE; ALSO INCLUDE 
+						SAMPLE RECONSTRUCTIONS FROM OUR MODELS!!!!</strong>
+					Include example audio reconstructions. 
+					
+					<br><br><br>
+					We also include some example audio reconstructions:
+
+					</p>
+				<div style="display: flex; align-items: flex-start; gap: 1em; margin-top: 0.5em;">
+
+					<!-- Left column: audio clips -->
+					<div style="display: flex; flex-direction: column; gap: 0.6em;">
+
+						<div style="display: flex; align-items: center; gap: 1em;">
+							<audio controls style="width: 350px;">
+								<source src="files/original0.wav" type="audio/wav">
+							</audio>
+							<figcaption style="font-size: 0.9em; color: #555;">
+								Clean signal
+							</figcaption>
+						</div>
+
+						<div style="display: flex; align-items: center; gap: 1em;">
+							<audio controls style="width: 350px;">
+								<source src="files/noisy5.wav" type="audio/wav">
+							</audio>
+							<figcaption style="font-size: 0.9em; color: #555;">
+								Augmented w/ Gaussian Noise (\(\sigma = 5\)). WATCH YOUR EARS!!!
+							</figcaption>
+						</div>
+
+						<div style="display: flex; align-items: center; gap: 1em;">
+							<audio controls style="width: 350px;">
+								<source src="files/reconstr5.wav" type="audio/wav">
+							</audio>
+							<figcaption style="font-size: 0.9em; color: #555;">
+								Reconstructed w/ regular DAE architecture. 
+							</figcaption>
+						</div>
+
+						<div style="display: flex; align-items: center; gap: 1em;">
+							<audio controls style="width: 350px;">
+								<source src="files/reconstr5_cl.wav" type="audio/wav">
+							</audio>
+							<figcaption style="font-size: 0.9em; color: #555;">
+							Reconstructed w/ novel CLUNet architecture. 
+							</figcaption>
+						</div>
+					</div>
+				</div>
+
+		</div>
+	</div>
+
+
+		    <div class="content-margin-container" id="conclusion">
+				<div class="margin-left-block">
+				</div>
+		    <div class="main-content-block">
+            <h1>Conclusion & Future Work</h1>
+			
+				<p>
+					This research tackles the problem of voice isolation, i.e. extracting a clean audio signal 
+					from a noisy environment. We tested the novel thesis that combining the latent space 
+					representations from a contrastive-learning framework and from a traditional reconstruction 
+					framework allows for a more stable training procedure and more accurate final models. We prove 
+					this experimentally by demonstrating the effectiveness of our methodology on a variety of noise 
+					augmentations – Gaussian & Environmental – over a variety of different amplitudes.
+				</p>
+
+				<p>However, there are still many future directions we hope to explore:</p>
+
+				<ul>
+					<li>
+						<strong>Noise Generalizability:</strong> Can a model trained on extracting a clean 
+						signal from a certain type of noise generalize to other types of noise? Can a model 
+						trained with Gaussian noise generalize to Environmental noise? What if we mix in 
+						a variety of different noises during train-time?
+					</li>
+
+					<li>
+						<strong>More Sophisticated Model Architectures:</strong> In this research, we used a 
+						standard U-Net to test our hypothesis as a simple proof of concept. But how well does 
+						this idea generalize to deeper models? Would this work for time-series models 
+						(e.g., RNN, LSTM, Transformer) that interact directly with the waveform without 
+						spectrograms?
+					</li>
+
+					<li>
+						<strong>Different Training Procedures:</strong> Training the voice pipeline was a 
+						non-trivial task. We only tried the approach of fully training the CL encoder and then 
+						training the reconstruction-based encoder/decoder afterward. However, other procedures 
+						are possible. Alternating epochs between CL loss and reconstruction loss might be viable, 
+						or using a single encoder trained with a joint reconstruction–contrastive objective.
+					</li>
+				</ul>
+
+            </div>
+		</div>
+
+
+	<div class="content-margin-container" id="citations">
+			<div class="margin-left-block">
+			</div>
+		<div class="main-content-block">
+					<div class='citation' id="references" style="height:auto"><br>
+						<h1> References:</h1><br><br>
+						<a id="ref_1"></a>[1]
+							K. Wang, B. He, and W.-P. Zhu, 
+							<i>TSTNN: Two-stage Transformer based Neural Network for Speech Enhancement in the Time Domain</i>, 
+							arXiv preprint arXiv:2103.09963, 2021.<a href="https://arxiv.org/pdf/2103.09963">https://arxiv.org/pdf/2103.09963</a>.<br>
+						</a><br>
+
+						<a id="ref_2"></a>[2]
+						F. Weninger, H. Erdogan, S. Watanabe, E. Vincent, J. Le Roux, J. R. Hershey, and B. Schuller, 
+						<i>Speech enhancement with LSTM recurrent neural networks and its application to noise‑robust ASR</i>, 
+						in 12th International Conference on Latent Variable Analysis and Signal Separation (LVA/ICA), 
+						Liberec, Czech Republic, August 25–28, 2015, Springer, Lecture Notes in Computer Science, vol. 9237, pp. 91–99. 
+						<a href="https://inria.hal.science/hal-01163493">https://inria.hal.science/hal-01163493</a>.<br><br>
+
+						<a id="ref_3"></a>[3]
+						C. Macartney and T. Weyde, 
+						<i>Improved Speech Enhancement with the Wave‑U‑Net</i>, 
+						arXiv preprint arXiv:1811.11307, 2018. 
+						<a href="https://arxiv.org/abs/1811.11307">https://arxiv.org/abs/1811.11307</a><br><br>
+						
+						<a id="ref_4"></a>[4]
+						Sound, Wikipedia, 
+						<a href="https://en.wikipedia.org/wiki/Sound">https://en.wikipedia.org/wiki/Sound</a><br><br>
+						
+						<a id="ref_5"></a>[5]
+						L. R. Rabiner and R. W. Schafer, 
+						<i>Digital Processing of Speech Signals</i>, 
+						Prentice-Hall, 1978.<br><br>
+
+						<a id="ref_6"></a>[6]
+						Short‑time Fourier transform, Wikipedia, 
+						<a href=" https://en.wikipedia.org/wiki/Short-time_Fourier_transform"> https://en.wikipedia.org/wiki/Short-time_Fourier_transform</a><br><br>
+						
+						
+						<a id="ref_7"></a>[7]
+						Y. Isik, J. Le Roux, Z. Chen, S. Watanabe, and J. R. Hershey, 
+						<i>Single‑Channel Multi‑Speaker Separation using Deep Clustering</i>, 
+						arXiv preprint arXiv:1607.02173, 2016. 
+						<a href="https://arxiv.org/abs/1607.02173">https://arxiv.org/abs/1607.02173</a><br><br>
+
+						<a id="ref_8"></a>[8]
+						Y. Xu, J. Du, L.-R. Dai, and C.-H. Lee, 
+						<i>A Regression Approach to Speech Enhancement Based on Deep Neural Networks</i>, 
+						IEEE/ACM Transactions on Audio, Speech, and Language Processing, vol. 23, no. 1, pp. 7–19, 2015. 
+						<a href="http://staff.ustc.edu.cn/~jundu/Publications/publications/Trans2015_Xu.pdf">http://staff.ustc.edu.cn/~jundu/Publications/publications/Trans2015_Xu.pdf</a><br><br>
+
+						<a id="ref_9"></a>[9]
+						Towards Data Science, 
+						<i>Speech Enhancement with Deep Learning</i>, 2020. 
+						<a href="https://towardsdatascience.com/speech-enhancement-with-deep-learning-36a1991d3d8d/">https://towardsdatascience.com/speech-enhancement-with-deep-learning-36a1991d3d8d/</a><br><br>
+
+						<a id="ref_10"></a>[10]
+						M. Xu, J. Chen, and Y. Wang, 
+						<i>Self-Supervised Speech Denoising Using Only Noisy Audio Signals</i>, arXiv preprint arXiv:2111.00242, 2021. 
+						<a href="https://arxiv.org/abs/2111.00242">https://arxiv.org/abs/2111.00242</a><br><br>
+
+
+						<a id="ref_11"></a>[11]
+						Y. Xu, J. Du, L.-R. Dai, and C.-H. Lee, 
+						<i>End-to-End Waveform Utterance Enhancement for Direct Evaluation Metrics Optimization by Fully Convolutional Neural Networks</i>, arXiv preprint arXiv:1709.03658, 2017. 
+						<a href="https://arxiv.org/pdf/1709.03658">https://arxiv.org/pdf/1709.03658</a><br><br>
+
+						<a id="ref_12"></a>[12]
+						X. Li, Y. Huang, and Z. Zhang, 
+						<i>Context-Aware U-Net for Speech Enhancement in Time Domain</i>, 
+						IEEE Transactions on Multimedia, 2021. 
+						<a href="https://ieeexplore.ieee.org/document/9401787">https://ieeexplore.ieee.org/document/9401787</a><br><br>
+
+						<a id="ref_13"></a>[13]
+						Yi Luo, Zhuo Chen, Takuya Yoshioka
+						<i>Dual-path RNN: efficient long sequence modeling for time-domain single-channel speech separation</i>, 
+						2020. 
+						<a href="https://arxiv.org/abs/1910.06379">https://arxiv.org/abs/1910.06379</a><br><br>
+
+						<a id="ref_14"></a>[14]
+						Felix Weninger, Hakan Erdogan, Shinji Watanabe, Emmanuel Vincent, Jonathan Le Roux, et al..
+						Speech enhancement with LSTM recurrent neural networks and its application to noise-robust ASR.
+						12th International Conference on Latent Variable Analysis and Signal Separation (LVA/ICA), Aug
+						2015, Liberec, Czech Republic. ffhal-01163493f
+						<a href="https://inria.hal.science/hal-01163493/document">https://inria.hal.science/hal-01163493/document</a><br><br>
+					
+						<a id="ref_15"></a>[15]
+						Zizheng Zhang, Chen Chen, Hsin-Hung Chen, Xiang Liu, Yuchen Hu, Eng Siong Chng. Noise-Aware 
+						Speech Separation with Contrastive Learning, 2024. 
+						<a href="https://arxiv.org/abs/2305.10761">https://arxiv.org/abs/2305.10761.com</a><br><br>
+
+						<a id="ref_16"></a>[16]
+						Peter Ochieng. Speech Separation based on Contrastive Learning and Deep Modularization, 2023. 
+						<a href="https://arxiv.org/abs/2305.10652">https://arxiv.org/abs/2305.10652</a><br><br>
+
+						<a id="ref_17"></a>[17] PyTorch Documentation. 
+						<a href=" https://docs.pytorch.org/audio/main/generated/torchaudio.datasets.LIBRISPEECH.html
+	"> https://docs.pytorch.org/audio/main/generated/torchaudio.datasets.LIBRISPEECH.html
+	</a><br><br>
+
+					</div>
+		</div>
+	</div>
+
+	</body>
+
+	</html>

@@ -1,7 +1,7 @@
 # Voice_Isolation
 Final project for MIT's Deep Learning (6.7960) Class. Built a deep-learning pipeline for voice isolation. 
 
-Working Outline: https://docs.google.com/document/d/1Z5bNR8pYPRpAQ_cMwrd0k4K78t8TmwluppZDUIWA5z8/edit?usp=sharing
+BLOG: https://MarcusBluestone.github.io/Voice_Isolation/
 
 Download Enviornment:
 ```
@@ -20,7 +20,7 @@ cd src
 python -m data
 ```
 
-Run with:
+To run the training, set any .json files in `params` folder. Then run:
 ```
 cd src
 python -m train
