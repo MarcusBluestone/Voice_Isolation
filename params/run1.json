@@ -3,7 +3,7 @@
   "dataset_size": null,
   "validation_size": null,
   "batch_size": 128,
-  "noise_type": "G", 
+  "noise_type": "E", 
   "gauss_scale": 0.01,
   "env_scale": 5,
   "model_criteria": "val_loss",

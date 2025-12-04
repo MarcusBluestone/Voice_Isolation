@@ -105,8 +105,8 @@ class NoiseGenerator:
 
         waveform_noise, sample_rate = torchaudio.load(wav_path)
         waveform_noise = get_chunk(waveform_noise[0], chunk_size = waveform_inp.shape[-1])
-        print(waveform_inp.shape)
-        print(waveform_noise.shape)
+        # print(waveform_inp.shape)
+        # print(waveform_noise.shape)
 
         return waveform_inp + waveform_noise * scale
 
