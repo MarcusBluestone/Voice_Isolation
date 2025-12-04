@@ -44,6 +44,7 @@ def train_contrastive(params: dict,
     gauss_scale = params['gauss_scale']
     env_scale = params['env_scale']
     validation_size = params['validation_size']
+    env_noise_type = params['env_type']
 
     # Setup Dataset
     clean_dataset = CleanDataset(chunk_size = 30_000, count = dataset_size)
@@ -71,7 +72,7 @@ def train_contrastive(params: dict,
     if noise_type == "G":
         noise_function = lambda x : noise_generator.add_gaussian(x, sigma = gauss_scale)  # noqa: E731
     elif noise_type == "E":
-        noise_function = lambda x : noise_generator.add_environment(x, scale = env_scale) # noqa: E731
+        noise_function = lambda x : noise_generator.add_environment(x, scale = env_scale, category = env_noise_type) # noqa: E731
     else:
         raise ValueError(f"Unknown noise type specified: {noise_type}")
     
@@ -212,18 +213,23 @@ if __name__ == "__main__":
         'validation_size': None,
         'batch_size': 128,
         'model_criteria': 'mse',
-        'noise_type': 'G',
+        'noise_type': 'E',
         'gauss_scale': 0.1,
         'env_scale': 1,
+        "env_type": "OMEETING",
     }
-    run_gaussian = [.01, .1, .3, .5]
-    names = ['G0-01', 'G0-1', 'G0-3', 'G0-5']
-    for scale, name in zip(run_gaussian, names):
+    # run_gaussian = [.01, .1, .3, .5]
+    # names = ['G0-01', 'G0-1', 'G0-3', 'G0-5']
+    run_env = [10, 50, 70, 100]
+    names = ['E0-10', 'E0-50', 'E0-70', 'E0-100']
+    for scale, name in zip(run_env, names):
         exp_params = params.copy()
-        exp_params['gauss_scale'] = scale
+        # exp_params['gauss_scale'] = scale
+        exp_params['env_scale'] = scale
         out_dir = Path(f'../outputs/contrastive/{name}')
+        # os.makedirs(out_dir, exist_ok=True)
         model = train_contrastive(exp_params, out_dir, tau=0.07, validate=True)
-
+        # model = UNet_double(input_channels=1, base_filters=16, final_activation='tanh')
         if torch.backends.mps.is_available():  # Apple Silicon GPU
             device = 'mps'
         elif torch.cuda.is_available():        # Nvidia GPU
@@ -231,7 +237,7 @@ if __name__ == "__main__":
         else:
             device = 'cpu'
         model = model.to(device)
-        clean_dataset = CleanDataset(chunk_size = 30_000, count = 50)
+        clean_dataset = CleanDataset(chunk_size = 30_000, count = None)
         train_loader = DataLoader(clean_dataset, batch_size = 64, shuffle = False, drop_last=True)
 
         file_out = out_dir / "contrastive_model_inspection.txt"

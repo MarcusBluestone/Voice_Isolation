@@ -83,7 +83,7 @@ def train(params: dict, out_dir: Path):
             if noise_type == "G":
                 noise_function = lambda x : noise_generator.add_gaussian(x, sigma = gauss_scale)  # noqa: E731
             elif noise_type == "E":
-                noise_function = lambda x : noise_generator.add_environment(x, scale = env_scale, category_num = env_noise_type) # noqa: E731
+                noise_function = lambda x : noise_generator.add_environment(x, scale = env_scale, category = env_noise_type) # noqa: E731
             else:
                 raise ValueError(f"Unknown noise type specified: {noise_type}")
             
@@ -135,10 +135,12 @@ if __name__ == '__main__':
     param_runs = parse_params(param_dir)
 
     for i, params in enumerate(param_runs):
-        run_gaussian = [.01, .1, .3, .5]
-        names = ['G0-01', 'G0-1', 'G0-3', 'G0-5']
-        for scale, name in zip(run_gaussian, names):
+        # run_gaussian = [.01, .1, .3, .5]
+        # names = ['G0-01', 'G0-1', 'G0-3', 'G0-5']
+        run_env = [10, 50, 70, 100]
+        names = ['E0-10', 'E0-50', 'E0-70', 'E0-100']
+        for scale, name in zip(run_env, names):
             exp_params = params.copy()
-            exp_params['gauss_scale'] = scale
+            exp_params['env_scale'] = scale
             out_dir = Path(f'../outputs/regular/{name}')
             train(exp_params, out_dir = out_dir)

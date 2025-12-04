@@ -157,14 +157,15 @@ def inspect_decoder_weights(model, out_file):
     # First layer that consumes the bottleneck:
     w = model.decoder.up6.weight    # shape: (out_ch, in_ch, kH, kW)
 
-    in_ch = w.shape[1]
+    in_ch = w.shape[0] # for convTranspose the in_channels are at dim 0
     Cc = model.encoder_contrastive.conv5.conv2.out_channels  # 16 * base_filters
     Cr = model.encoder_regular.conv5.conv2.out_channels      # same
 
     assert Cc + Cr == in_ch, f"Expected {Cc+Cr} in_channels, got {in_ch}"
 
-    w_contrastive = w[:, :Cc].abs().mean().item()
-    w_regular     = w[:, Cc:].abs().mean().item()
+    # Split along the in_channel dimension (dim=0)
+    w_contrastive = w[:Cc].abs().mean().item()
+    w_regular     = w[Cc:].abs().mean().item()
 
     line_1 = f"Decoder up6 | mean | contrastive input channels: {w_contrastive}"
     line_2 = f"Decoder up6 | mean | regular      input channels: {w_regular}"
