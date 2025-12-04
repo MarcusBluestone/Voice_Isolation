@@ -783,12 +783,79 @@
 					the accuracy of the model when performing reconstruction. Moreover, the training procedure 
 					is much more stable when we first train w/ the contrastive loss. 
 
+					<br><br>
+					To further validate our results that contrastive learning is useful in the learing process,
+					we inspect the mean of the absolute values of the weights (MAW) in the convolutional layer at the 
+					bottleneck just before decoding. We compare the weights associated w/ the \(Enc_{REC}\) output and  \(Enc_{CL}\) output. We note
+					that the mean weights are pretty comparable, which indicates the model is using information from both encoders
+					in the decoding process, across all noise augmentations. 
+					<center> 
+						<table style="border-collapse: collapse; width:70%;">
+						<tr>
+							<th style="border:1px solid #ccc; padding:6px; text-align:center;">Noise Used</th>
+							<th style="border:1px solid #ccc; padding:6px; text-align:center;">MAW from \(Enc_{REC}\) </th>
+							<th style="border:1px solid #ccc; padding:6px; text-align:center;">MAW from \(Enc_{CL}\)</th>
+						</tr>
 
-					To further validate our results, we inspect the mean of the absolute values of the weights 
-					in the convolutional layer at the bottleneck.   <strong>WRITE VALUES AND ELABORATE; ALSO INCLUDE 
-						SAMPLE RECONSTRUCTIONS FROM OUR MODELS!!!!</strong>
-					Include example audio reconstructions. 
-					
+						<tr>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">G-01</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.03</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.02</td>
+						</tr>
+
+						<tr>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">G-1</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.04</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.02</td>
+						</tr>
+
+						<tr>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">G-3</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.03</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.02</td>
+						</tr>
+
+						<tr>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">G-5</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.03</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.04</td>
+						</tr>
+
+						<tr>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">E-10</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.03</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.02</td>
+						</tr>
+
+						<tr>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">E-50</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.03</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.02</td>
+						</tr>
+
+						<tr>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">E-70</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.03</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.02</td>
+						</tr>
+
+						<tr>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">E-100</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.02</td>
+							<td style="border:1px solid #ccc; padding:6px; text-align:center;">0.02</td>
+						</tr>
+
+
+
+						</table>
+						<figcaption style="font-size: 0.9em; color: #555;">
+							The Mean Absolute Weight (MAW) from the convolutional layer at the bottlneck. The second column
+							represents the MAW from the weights associated w/ the \(Enc_{REC}\) output and the third column
+							represents the MAW from the weights associated w/ the \(Enc_{CL}\). The first column shows which
+							noise augmentation the model is being trained with. 
+						</figcaption>
+						</center>
+
 					<br><br><br>
 					We also include some example audio reconstructions:
 
