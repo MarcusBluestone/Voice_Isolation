@@ -266,8 +266,8 @@
 
 			<p>
 				More specifically, given an audio signal that has some background noise and/or disturbances, 
-				can we remove the noise without affecting the quality of the underlying signal? Our research 
-				proposes and tests a novel approach to this problem. For instance, here is a clean
+				can we remove the noise without affecting the quality of the underlying signal? For instance, consider the 
+				example below- can a model remove random Gaussian noise? Our research develops a novel approach to this problem. 
 			</p>
 			
 		<figure style="margin: 1em 0;">
@@ -326,11 +326,16 @@
 		\]
 
 		</center>
+		<p> But what types of data are we even dealing with here? </p>
+
 		</div>
+
+
 		<!-- <div class="margin-right-block" style="transform: translate(0%, -100%);">  you can move the margin notes up and down with translate -->
 		<!-- Interestingly, Plato also asked if X does Y, in <a href="#ref_1">[1]</a>. -->
 		<!-- </div>  -->
 	</div>
+
 
 	<div class="content-margin-container" id="Background: What is Sound?">
 			<div class="margin-left-block">
@@ -501,7 +506,7 @@
 								latent space, while mapping views of different signals to locations that are 
 								far apart in latent space. In our application, the “different views” correspond 
 								to different, random noise augmentations applied to the same clean signal. Note 
-								that this method only trains an encoder and doesn’t worry about reconstructing 
+								that this method only trains an encoder and doesn’t deal with reconstructing 
 								the clean signal. 
 
 								<br><br>
@@ -548,7 +553,7 @@
 
 						<p>
 							Training this pipeline is not a trivial task, and we propose other options 
-							in the Future Works section. In this pipeline, we first train \(Enc_{CL}\) solely
+							in the Future Works section. In this project, we first train \(Enc_{CL}\) solely
 							via contrastive loss. Afterwards, we freeze that encoder, and train the 
 							\(Enc_{REC}\)  -  \(Dec_{REC}\) pair using traditional MSE loss with the clean signal as target. 
 							
@@ -605,7 +610,7 @@
 						</p>
 						
 						Note that we are only training our model to predict the original amplitude and not 
-						the phase, as is standard practice in these settings, as the human ear isn’t able to 
+						the phase, as is standard practice in these settings. This is because the human ear isn’t able to 
 						really hear the difference between clean & noisy phase, and phase spectrograms tend to 
 						look a lot noisier and are thus harder for the model to predict anyways.  When creating 
 						the original waveform for auditory inspection, we simply use the noisy phase spectrogram <a href="#ref_11">[11]</a>. 
@@ -645,7 +650,11 @@
 
 				<ol>
 					<li><strong>Gaussian Noise:</strong> We add Gaussian noise centered at 0, with standard deviation ranging from 0.01 to 0.5.</li>
-					<li><strong>Environmental Noise:</strong> We used a Kaggle dataset that contains long clips of environmental noise, such as a “river”, “hallway”, or “office meeting”. We scaled the amplitude of these clips, ranging from values 10 to 100.</li>
+					<li><strong>Environmental Noise:</strong> We used a Kaggle dataset that contains long 
+						clips of environmental noise, such as a “river”, “hallway”, or “office meeting”. 
+						We scaled the amplitude of these clips, ranging from values 10 to 100. Note that some clips
+						contain human dialogue, not just environmental noise, and we explicitly test with those clips as noise 
+						to see if the model is still able to differentiate between it and the original audio. </li>
 				</ol>
 
 				<figure style="margin: 1em 0; text-align: center;">
@@ -717,7 +726,7 @@
 
 
 				We first show the results for training just the contrastive learning encoder. See Figure below. 
-				the intensity of the noise.  
+				The intensity of the noise increases from left to right.  
 				<figure style="margin: 1em 0; text-align: center;">
 					<img src="files/ContrastiveLoss.png" 
 						alt="CLUNet"
